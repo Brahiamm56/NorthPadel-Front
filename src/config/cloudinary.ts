@@ -34,3 +34,4 @@ export const getCloudinarySignature = async (): Promise<{ signature: string; tim
 };
 
 const data = await getCloudinarySignature();
+console.log(data);
