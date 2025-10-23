@@ -10,10 +10,12 @@ import {
   Image,
   ActivityIndicator,
   Alert,
+  Linking,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { getComplejosConCanchas, type Complejo, type Cancha } from '../../services/canchasService';
 import { colors } from '../../theme/colors';
+import { spacing, fontSize, borderRadius } from '../../theme/spacing';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { CanchasStackParamList } from '../../navigation/UserTabNavigator';
 
@@ -61,19 +63,40 @@ const CanchasScreen = ({ navigation }: Props) => {
   };
 
   // Manejar selección de cancha
-  const handleCanchaPress = (cancha: Cancha, complejoId: string) => {
-  navigation.navigate('CanchaDetalle', { 
-    canchaId: cancha.id,
-    complejoId: complejoId 
-  });
-};
+  const handleCanchaPress = (cancha: Cancha, complejo: Complejo) => {
+    // Lógica del "Directorio Inteligente"
+    if (complejo.isVerified) {
+      // Si el complejo está verificado, navegar al detalle
+      navigation.navigate('CanchaDetalle', {
+        canchaId: cancha.id,
+        complejoId: complejo.id
+      });
+    } else {
+      // Si no está verificado, mostrar opción de llamar
+      Alert.alert(
+        'Complejo no verificado',
+        `¿Quieres llamar a ${complejo.nombre} para reservar?`,
+        [
+          { text: 'Cancelar', style: 'cancel' },
+          {
+            text: 'Llamar',
+            onPress: () => {
+              // Aquí iría el teléfono del complejo
+              const phoneNumber = complejo.telefono || 'tel:+5491123456789'; // Placeholder
+              Linking.openURL(phoneNumber);
+            }
+          }
+        ]
+      );
+    }
+  };
 
 
   // Renderizar tarjeta de cancha
-  const renderCanchaCard = (item: Cancha, complejoId: string) => (
+  const renderCanchaCard = (item: Cancha, complejo: Complejo) => (
     <TouchableOpacity
       style={styles.canchaCard}
-      onPress={() => handleCanchaPress(item, complejoId)}
+      onPress={() => handleCanchaPress(item, complejo)}
       activeOpacity={0.8}
     >
       <Image
@@ -85,7 +108,13 @@ const CanchasScreen = ({ navigation }: Props) => {
         <Text style={styles.canchaName} numberOfLines={1}>
           {item.nombre}
         </Text>
-        <Text style={styles.canchaPrice}>{item.precioHora} / hr</Text>
+        <Text style={styles.canchaPrice}>${item.precioHora} / hr</Text>
+        {!complejo.isVerified && (
+          <View style={styles.callLabel}>
+            <Ionicons name="call" size={12} color={colors.primary} />
+            <Text style={styles.callText}>Llamar</Text>
+          </View>
+        )}
       </View>
     </TouchableOpacity>
   );
@@ -136,7 +165,7 @@ const CanchasScreen = ({ navigation }: Props) => {
               horizontal
               showsHorizontalScrollIndicator={false}
               keyExtractor={(item) => item.id}
-              renderItem={({ item }) => renderCanchaCard(item, complejo.id)}
+              renderItem={({ item }) => renderCanchaCard(item, complejo)}
               contentContainerStyle={styles.canchasList}
               ListEmptyComponent={
                 <Text style={styles.emptyText}>No hay canchas disponibles</Text>
@@ -171,69 +200,69 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   loadingText: {
-    marginTop: 16,
+    marginTop: spacing.md,
     color: colors.textSecondary,
-    fontSize: 16,
+    fontSize: fontSize.md,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 12,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.md,
     backgroundColor: colors.white,
     borderBottomWidth: 1,
-    borderBottomColor: colors.gray200,
+    borderBottomColor: colors.border,
   },
   searchContainer: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.gray100,
-    borderRadius: 12,
-    paddingHorizontal: 12,
+    backgroundColor: colors.background,
+    borderRadius: borderRadius.md,
+    paddingHorizontal: spacing.md,
     height: 44,
   },
   searchIcon: {
-    marginRight: 8,
+    marginRight: spacing.sm,
   },
   searchInput: {
     flex: 1,
-    fontSize: 16,
+    fontSize: fontSize.md,
     color: colors.text,
   },
   notificationButton: {
-    marginLeft: 12,
+    marginLeft: spacing.md,
     width: 44,
     height: 44,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: colors.gray100,
-    borderRadius: 12,
+    backgroundColor: colors.background,
+    borderRadius: borderRadius.md,
   },
   scrollView: {
     flex: 1,
   },
   complejoSection: {
-    marginTop: 24,
-    marginBottom: 8,
+    marginTop: spacing.xl,
+    marginBottom: spacing.sm,
   },
   complejoTitle: {
-    fontSize: 20,
+    fontSize: fontSize.lg,
     fontWeight: 'bold',
     color: colors.text,
-    marginBottom: 12,
-    marginHorizontal: 16,
+    marginBottom: spacing.md,
+    marginHorizontal: spacing.lg,
   },
   canchasList: {
-    paddingHorizontal: 16,
+    paddingHorizontal: spacing.lg,
   },
   canchaCard: {
     width: 160,
     height: 180,
     backgroundColor: colors.white,
-    borderRadius: 12,
-    marginRight: 12,
+    borderRadius: borderRadius.md,
+    marginRight: spacing.md,
     overflow: 'hidden',
     elevation: 2,
     shadowColor: colors.shadow,
@@ -244,21 +273,32 @@ const styles = StyleSheet.create({
   canchaImage: {
     width: '100%',
     height: 110,
-    backgroundColor: colors.gray200,
+    backgroundColor: colors.background,
   },
   canchaInfo: {
-    padding: 10,
+    padding: spacing.sm,
   },
   canchaName: {
-    fontSize: 14,
+    fontSize: fontSize.sm,
     fontWeight: '600',
     color: colors.text,
     marginBottom: 4,
   },
   canchaPrice: {
-    fontSize: 16,
+    fontSize: fontSize.md,
     fontWeight: 'bold',
     color: colors.primary,
+  },
+  callLabel: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: spacing.xs,
+  },
+  callText: {
+    fontSize: fontSize.xs,
+    color: colors.primary,
+    marginLeft: spacing.xs,
+    fontWeight: '500',
   },
   emptyContainer: {
     flex: 1,
@@ -267,20 +307,20 @@ const styles = StyleSheet.create({
     paddingVertical: 60,
   },
   emptyTitle: {
-    fontSize: 18,
+    fontSize: fontSize.lg,
     fontWeight: '600',
     color: colors.text,
-    marginTop: 16,
-    marginBottom: 8,
+    marginTop: spacing.lg,
+    marginBottom: spacing.sm,
   },
   emptySubtitle: {
-    fontSize: 14,
+    fontSize: fontSize.sm,
     color: colors.textSecondary,
   },
   emptyText: {
-    fontSize: 14,
+    fontSize: fontSize.sm,
     color: colors.textSecondary,
-    paddingHorizontal: 16,
+    paddingHorizontal: spacing.lg,
   },
 });
 

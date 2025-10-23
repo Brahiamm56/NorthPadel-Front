@@ -1,6 +1,7 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../theme/colors';
 import { AdminCanchasScreen } from '../screens/admin/AdminCanchasScreen';
 import AdminReservasScreen from '../screens/admin/AdminReservasScreen';
@@ -15,6 +16,8 @@ type TabParamList = {
 const Tab = createBottomTabNavigator<TabParamList>();
 
 export const AdminTabs = () => {
+  const insets = useSafeAreaInsets();
+
   return (
     <Tab.Navigator
       screenOptions={{
@@ -22,17 +25,22 @@ export const AdminTabs = () => {
         tabBarInactiveTintColor: colors.gray500,
         tabBarStyle: {
           paddingTop: 5,
-          height: 60,
+          paddingBottom: insets.bottom > 0 ? insets.bottom : 5,
+          height: 60 + (insets.bottom > 0 ? insets.bottom : 0),
+          backgroundColor: colors.white,
+          borderTopWidth: 1,
+          borderTopColor: colors.gray200,
         },
         tabBarLabelStyle: {
           fontSize: 12,
           marginBottom: 5,
+          fontWeight: '500',
         },
         headerShown: false,
       }}
     >
-      <Tab.Screen 
-        name="Reservas" 
+      <Tab.Screen
+        name="Reservas"
         component={AdminReservasScreen}
         options={{
           tabBarIcon: ({ color, size }) => (

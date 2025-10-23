@@ -1,9 +1,9 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { DeviceEventEmitter } from 'react-native';
+import { API_BASE_URL, TOKEN_KEY } from '../config/api';
 
 // --- URL de nuestro backend ---
-const API_URL = 'http://192.168.100.2:3000/api/auth';
-const TOKEN_KEY = 'auth_token';
+const API_URL = `${API_BASE_URL}/auth`;
 const USER_KEY = 'user_data';
 
 // --- Tipos de Datos ---

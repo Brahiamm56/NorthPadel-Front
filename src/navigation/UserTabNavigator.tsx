@@ -2,6 +2,7 @@ import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../theme/colors';
 
 // Importar las pantallas del usuario
@@ -76,6 +77,8 @@ const Tab = createBottomTabNavigator<UserTabParamList>();
  * Permite al usuario navegar entre Canchas, Mis Reservas y Perfil
  */
 export const UserTabNavigator = () => {
+  const insets = useSafeAreaInsets();
+
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
@@ -101,10 +104,11 @@ export const UserTabNavigator = () => {
         tabBarActiveTintColor: colors.primary,
         // Color del ícono y texto cuando la pestaña está inactiva
         tabBarInactiveTintColor: colors.gray500,
-        // Estilos de la barra de pestañas
+        // Estilos de la barra de pestañas con SafeArea
         tabBarStyle: {
           paddingTop: 5,
-          height: 60,
+          paddingBottom: insets.bottom > 0 ? insets.bottom : 5,
+          height: 60 + (insets.bottom > 0 ? insets.bottom : 0),
           backgroundColor: colors.white,
           borderTopWidth: 1,
           borderTopColor: colors.gray200,
