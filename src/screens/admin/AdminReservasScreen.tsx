@@ -10,11 +10,15 @@ import {
   SafeAreaView,
   Alert,
   Modal,
-  Image
+  Image,
+  RefreshControl,
+  TextInput,
+  Animated
 } from 'react-native';
 import { format, addDays, isToday, isSameDay } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Ionicons } from '@expo/vector-icons';
+import { SearchBar } from '../../components/admin/SearchBar';
 import { colors } from '../../theme/colors';
 import { spacing, fontSize, borderRadius } from '../../theme/spacing';
 import {
@@ -91,6 +95,77 @@ const DateSelector = ({ selectedDate, onSelectDate }: { selectedDate: Date; onSe
   );
 };
 
+// Componente para filtrar por estado de reservas
+const FilterTabs = ({
+  reservas,
+  selectedEstado,
+  onSelectEstado
+}: {
+  reservas: ReservaAdmin[];
+  selectedEstado: string | null;
+  onSelectEstado: (estado: string | null) => void;
+}) => {
+  const estados = [
+    { key: null, label: 'Todas', color: '#666666' },
+    { key: 'pendiente', label: 'Pendientes', color: '#FFA726' },
+    { key: 'confirmada', label: 'Confirmadas', color: '#4CAF50' },
+    { key: 'en_curso', label: 'En curso', color: '#2196F3' },
+    { key: 'cancelada', label: 'Canceladas', color: '#EF5350' },
+  ];
+
+  const getCount = (estadoKey: string | null) => {
+    if (estadoKey === null) return reservas.length;
+    return reservas.filter(r => r.estado === estadoKey).length;
+  };
+
+  return (
+    <View style={styles.filterTabsContainer}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.filterTabsContent}
+      >
+        {estados.map((estado) => {
+          const isActive = selectedEstado === estado.key;
+          const count = getCount(estado.key);
+          
+          return (
+            <TouchableOpacity
+              key={estado.key || 'todas'}
+              style={[
+                styles.filterTab,
+                isActive && { backgroundColor: estado.color }
+              ]}
+              onPress={() => onSelectEstado(estado.key)}
+              activeOpacity={0.7}
+            >
+              <Text style={[
+                styles.filterTabText,
+                isActive && styles.filterTabTextActive
+              ]}>
+                {estado.label}
+              </Text>
+              {count > 0 && (
+                <View style={[
+                  styles.filterTabBadge,
+                  isActive && styles.filterTabBadgeActive
+                ]}>
+                  <Text style={[
+                    styles.filterTabBadgeText,
+                    isActive && styles.filterTabBadgeTextActive
+                  ]}>
+                    {count}
+                  </Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          );
+        })}
+      </ScrollView>
+    </View>
+  );
+};
+
 // Componente para el filtro de canchas
 const CourtFilter = ({
   canchas,
@@ -120,7 +195,7 @@ const CourtFilter = ({
             styles.courtButtonText,
             selectedCancha === null && styles.selectedCourtButtonText
           ]}>
-            Todas
+            Todas las canchas
           </Text>
         </TouchableOpacity>
 
@@ -150,61 +225,147 @@ const CourtFilter = ({
   );
 };
 
-// Componente para mostrar una tarjeta de reserva
-const ReservationCard = ({ reserva, onPress }: { reserva: ReservaAdmin; onPress: () => void }) => {
+// Componente para mostrar una tarjeta de reserva rediseñada
+const ReservationCard = ({
+  reserva,
+  onPress,
+  onConfirmar,
+  onCancelar
+}: {
+  reserva: ReservaAdmin;
+  onPress: () => void;
+  onConfirmar?: (id: string) => void;
+  onCancelar?: (id: string) => void;
+}) => {
   const getStatusColor = () => {
-    switch (reserva.estado) {
+    switch (reserva.estado?.toLowerCase()) {
       case 'confirmada':
-        return colors.success;
+        return '#4CAF50';
       case 'pendiente':
-        return colors.warning;
+        return '#FFA726';
+      case 'en_curso':
+        return '#2196F3';
+      case 'completada':
+        return '#9E9E9E';
       case 'cancelada':
-        return colors.error;
+        return '#EF5350';
       default:
-        return colors.gray500;
+        return '#666666';
     }
   };
 
+  const getStatusLabel = () => {
+    return reserva.estado?.charAt(0).toUpperCase() + reserva.estado?.slice(1) || 'Pendiente';
+  };
+
+  // Generar iniciales del usuario
+  const getInitials = (nombre: string) => {
+    const names = nombre?.split(' ') || ['U', 'S'];
+    return names.length >= 2
+      ? `${names[0][0]}${names[1][0]}`.toUpperCase()
+      : (names[0]?.[0]?.toUpperCase() || 'U');
+  };
+
   return (
-    <TouchableOpacity
-      style={[
-        styles.card,
-        reserva.estado === 'cancelada' && styles.canceledCard
-      ]}
-      onPress={onPress}
-      activeOpacity={0.7}
-    >
-      {/* Primera fila */}
-      <View style={styles.cardHeader}>
-        <View style={styles.cardLeft}>
-          {reserva.canchaImagenUrl && (
-            <Image source={{ uri: reserva.canchaImagenUrl }} style={styles.cardImage} />
-          )}
-          <View style={styles.cardInfo}>
-            <Text style={styles.cardTitle}>{reserva.canchaNombre}</Text>
-            <Text style={styles.cardTime}>
-              {reserva.hora} hs
-            </Text>
-          </View>
+    <View style={[styles.card, reserva.estado === 'cancelada' && styles.canceledCard]}>
+      {/* HEADER DEL CARD */}
+      <View style={styles.newCardHeader}>
+        <View style={styles.timeSection}>
+          <Text style={styles.newCardTime}>{reserva.hora}</Text>
+          <Text style={styles.newCardCancha}>{reserva.canchaNombre}</Text>
         </View>
-        <View style={[styles.statusBadge, { backgroundColor: getStatusColor() }]}>
-          <Text style={styles.statusText}>{reserva.estado}</Text>
+        <View style={[styles.newStatusBadge, { backgroundColor: getStatusColor() }]}>
+          <Text style={styles.newStatusText}>{getStatusLabel()}</Text>
         </View>
       </View>
 
-      {/* Segunda fila */}
-      <Text style={styles.cardSubtitle}>
-        {reserva.usuarioNombre} - {reserva.usuarioEmail}
-      </Text>
-    </TouchableOpacity>
+      {/* CUERPO DEL CARD */}
+      <View style={styles.cardBody}>
+        <View style={styles.userSection}>
+          <View style={styles.userAvatar}>
+            <Text style={styles.userAvatarText}>
+              {getInitials(reserva.usuarioNombre || 'Usuario')}
+            </Text>
+          </View>
+          <View style={styles.userInfo}>
+            <Text style={styles.userName}>{reserva.usuarioNombre || 'Usuario'}</Text>
+            <Text style={styles.userContact}>{reserva.usuarioEmail}</Text>
+          </View>
+        </View>
+
+        {/* Thumbnail de la cancha si existe */}
+        {reserva.canchaImagenUrl && (
+          <Image source={{ uri: reserva.canchaImagenUrl }} style={styles.canchaThumb} />
+        )}
+      </View>
+
+      {/* FOOTER DEL CARD - Botones de acción */}
+      {reserva.estado !== 'cancelada' && reserva.estado !== 'completada' && (
+        <View style={styles.cardFooter}>
+          {reserva.estado === 'pendiente' && onConfirmar && (
+            <>
+              <TouchableOpacity
+                style={[styles.actionBtn, styles.confirmBtn]}
+                onPress={() => onConfirmar(reserva.id)}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="checkmark" size={16} color="#FFF" />
+                <Text style={styles.actionBtnText}>Confirmar</Text>
+              </TouchableOpacity>
+              {onCancelar && (
+                <TouchableOpacity
+                  style={[styles.actionBtn, styles.cancelBtn]}
+                  onPress={() => onCancelar(reserva.id)}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="close" size={16} color="#FFF" />
+                  <Text style={styles.actionBtnText}>Cancelar</Text>
+                </TouchableOpacity>
+              )}
+            </>
+          )}
+          {reserva.estado === 'confirmada' && onCancelar && (
+            <TouchableOpacity
+              style={[styles.actionBtn, styles.cancelBtn]}
+              onPress={() => onCancelar(reserva.id)}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="close" size={16} color="#FFF" />
+              <Text style={styles.actionBtnText}>Cancelar</Text>
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity
+            style={[styles.actionBtn, styles.detailsBtn]}
+            onPress={onPress}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="eye-outline" size={16} color="#001F5B" />
+            <Text style={[styles.actionBtnText, { color: '#001F5B' }]}>Ver detalles</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+      {(reserva.estado === 'cancelada' || reserva.estado === 'completada') && (
+        <TouchableOpacity
+          style={[styles.actionBtn, styles.detailsBtnFull]}
+          onPress={onPress}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="eye-outline" size={16} color="#001F5B" />
+          <Text style={[styles.actionBtnText, { color: '#001F5B' }]}>Ver detalles</Text>
+        </TouchableOpacity>
+      )}
+    </View>
   );
 };
 
 // Componente principal de la pantalla de reservas
 const AdminReservasScreen = () => {
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [selectedCancha, setSelectedCancha] = useState<string | null>(null);
+  const [selectedEstado, setSelectedEstado] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<'reservas' | 'disponibilidad'>('reservas');
   const [canchas, setCanchas] = useState<CanchaAdmin[]>([]);
   const [reservas, setReservas] = useState<ReservaAdmin[]>([]);
@@ -254,19 +415,41 @@ const AdminReservasScreen = () => {
     cargarReservas();
   }, [selectedDate]);
 
-  // Filtrar reservas por fecha y cancha seleccionada
+  // Función para pull-to-refresh
+  const onRefresh = async () => {
+    setRefreshing(true);
+    try {
+      const reservasData = await getAdminReservas();
+      setReservas(reservasData);
+    } catch (error) {
+      console.error('Error al refrescar reservas:', error);
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  // Filtrar reservas por fecha, cancha, estado y búsqueda
   const reservasFiltradas = useMemo(() => {
-    // Convertir selectedDate a formato YYYY-MM-DD para comparación
     const selectedDateStr = format(selectedDate, 'yyyy-MM-dd');
     
     return reservas.filter(reserva => {
-      // Comparar directamente los strings de fecha (YYYY-MM-DD)
-      // Esto evita problemas de zona horaria
+      // Filtro por fecha
       const matchesDate = reserva.fecha === selectedDateStr;
+      
+      // Filtro por cancha
       const matchesCancha = !selectedCancha || reserva.canchaNombre === selectedCancha;
-      return matchesDate && matchesCancha;
+      
+      // Filtro por estado
+      const matchesEstado = !selectedEstado || reserva.estado === selectedEstado;
+      
+      // Filtro por búsqueda (nombre de usuario o email)
+      const matchesSearch = !searchQuery || 
+        reserva.usuarioNombre?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        reserva.usuarioEmail?.toLowerCase().includes(searchQuery.toLowerCase());
+      
+      return matchesDate && matchesCancha && matchesEstado && matchesSearch;
     });
-  }, [reservas, selectedDate, selectedCancha]);
+  }, [reservas, selectedDate, selectedCancha, selectedEstado, searchQuery]);
 
   const handleSelectDate = (date: Date) => {
     setSelectedDate(date);
@@ -340,6 +523,20 @@ const AdminReservasScreen = () => {
     }
   };
 
+  // Funciones para confirmar/cancelar desde los botones de acción rápida
+  const handleConfirmarReservaRapida = async (reservaId: string) => {
+    try {
+      await confirmarReservaAdmin(reservaId);
+      Alert.alert('✅ Éxito', 'Reserva confirmada correctamente');
+      // Recargar reservas
+      const reservasData = await getAdminReservas();
+      setReservas(reservasData);
+    } catch (error) {
+      console.error('Error confirmando reserva:', error);
+      Alert.alert('Error', 'No se pudo confirmar la reserva');
+    }
+  };
+
   const handleConfirmarReserva = async () => {
     if (!selectedReserva) return;
 
@@ -354,6 +551,32 @@ const AdminReservasScreen = () => {
       console.error('Error confirmando reserva:', error);
       Alert.alert('Error', 'No se pudo confirmar la reserva');
     }
+  };
+
+  const handleCancelarReservaRapida = async (reservaId: string) => {
+    Alert.alert(
+      'Cancelar Reserva',
+      '¿Estás seguro de que quieres cancelar esta reserva?',
+      [
+        { text: 'No', style: 'cancel' },
+        {
+          text: 'Sí, cancelar',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await cancelarReservaAdmin(reservaId);
+              Alert.alert('✅ Éxito', 'Reserva cancelada correctamente');
+              // Recargar reservas
+              const reservasData = await getAdminReservas();
+              setReservas(reservasData);
+            } catch (error) {
+              console.error('Error cancelando reserva:', error);
+              Alert.alert('Error', 'No se pudo cancelar la reserva');
+            }
+          },
+        },
+      ]
+    );
   };
 
   const handleCancelarReserva = async () => {
@@ -396,18 +619,49 @@ const AdminReservasScreen = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Reservas</Text>
-        <TouchableOpacity
-          style={styles.filterButton}
-          onPress={() => setViewMode(viewMode === 'reservas' ? 'disponibilidad' : 'reservas')}
-        >
-          <Ionicons
-            name={viewMode === 'reservas' ? 'options-outline' : 'calendar-outline'}
-            size={24}
-            color={colors.primary}
-          />
-        </TouchableOpacity>
+      {/* Header mejorado con búsqueda y badges */}
+      <View style={styles.headerContainer}>
+        <View style={styles.headerTop}>
+          <View style={styles.headerTitleSection}>
+            <Text style={styles.headerTitle}>Reservas</Text>
+            {reservasFiltradas.length > 0 && (
+              <View style={styles.headerBadge}>
+                <Text style={styles.headerBadgeText}>{reservasFiltradas.length}</Text>
+              </View>
+            )}
+          </View>
+          <View style={styles.headerActions}>
+            <TouchableOpacity
+              style={styles.headerButton}
+              onPress={() => setViewMode(viewMode === 'reservas' ? 'disponibilidad' : 'reservas')}
+            >
+              <Ionicons
+                name={viewMode === 'reservas' ? 'grid-outline' : 'calendar-outline'}
+                size={22}
+                color="#001F5B"
+              />
+            </TouchableOpacity>
+          </View>
+        </View>
+        
+        {/* Barra de búsqueda */}
+        {viewMode === 'reservas' && (
+          <View style={styles.searchContainer}>
+            <Ionicons name="search-outline" size={20} color="#666666" style={styles.searchIcon} />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Buscar por usuario o email..."
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              placeholderTextColor="#999999"
+            />
+            {searchQuery.length > 0 && (
+              <TouchableOpacity onPress={() => setSearchQuery('')} style={styles.clearButton}>
+                <Ionicons name="close-circle" size={20} color="#999999" />
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
       </View>
 
       {viewMode === 'reservas' ? (
@@ -415,6 +669,12 @@ const AdminReservasScreen = () => {
           <DateSelector
             selectedDate={selectedDate}
             onSelectDate={handleSelectDate}
+          />
+
+          <FilterTabs
+            reservas={reservas}
+            selectedEstado={selectedEstado}
+            onSelectEstado={setSelectedEstado}
           />
 
           <CourtFilter
@@ -425,9 +685,9 @@ const AdminReservasScreen = () => {
 
           {reservasFiltradas.length === 0 ? (
             <View style={styles.emptyContainer}>
-              <Ionicons name="calendar-outline" size={48} color={colors.textSecondary} />
-              <Text style={styles.emptyText}>No hay reservas para esta fecha</Text>
-              <Text style={styles.emptySubtext}>Selecciona otra fecha o intenta más tarde</Text>
+              <Ionicons name="calendar-outline" size={64} color={colors.textSecondary} />
+              <Text style={styles.emptyText}>No hay reservas</Text>
+              <Text style={styles.emptySubtext}>No se encontraron reservas para los filtros seleccionados</Text>
             </View>
           ) : (
             <FlatList
@@ -437,10 +697,20 @@ const AdminReservasScreen = () => {
                 <ReservationCard
                   reserva={item}
                   onPress={() => handleCardPress(item)}
+                  onConfirmar={handleConfirmarReservaRapida}
+                  onCancelar={handleCancelarReservaRapida}
                 />
               )}
               contentContainerStyle={styles.reservationsList}
               showsVerticalScrollIndicator={false}
+              refreshControl={
+                <RefreshControl
+                  refreshing={refreshing}
+                  onRefresh={onRefresh}
+                  colors={['#C4D600']}
+                  tintColor="#C4D600"
+                />
+              }
               ListFooterComponent={<View style={styles.listFooter} />}
             />
           )}
@@ -451,15 +721,33 @@ const AdminReservasScreen = () => {
             selectedDate={selectedDate}
             onSelectDate={handleSelectDate}
           />
+          
+          {/* Barra de búsqueda para canchas - ARRIBA del título */}
+          <View style={styles.searchContainer}>
+            <SearchBar
+              placeholder="Buscar canchas..."
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+            />
+          </View>
+          
           <View style={styles.disponibilidadHeader}>
             <Text style={styles.disponibilidadTitle}>Disponibilidad de Canchas</Text>
             <Text style={styles.disponibilidadSubtitle}>
               {format(selectedDate, "EEEE d 'de' MMMM", { locale: es })}
             </Text>
           </View>
-          <FlatList
-            data={canchas}
-            keyExtractor={(item) => item.id}
+          
+          {/* Filtrar canchas por búsqueda */}
+          {(() => {
+            const canchasFiltradas = canchas.filter(cancha =>
+              !searchQuery || cancha.nombre.toLowerCase().includes(searchQuery.toLowerCase())
+            );
+            
+            return (
+              <FlatList
+                data={canchasFiltradas}
+                keyExtractor={(item) => item.id}
             renderItem={({ item }) => (
               <TouchableOpacity
                 style={styles.canchaCard}
@@ -475,15 +763,19 @@ const AdminReservasScreen = () => {
                   <Text style={styles.canchaCardAction}>Toca para ver disponibilidad →</Text>
                 </View>
               </TouchableOpacity>
-            )}
-            contentContainerStyle={styles.canchasList}
-            ListEmptyComponent={() => (
-              <View style={styles.emptyContainer}>
-                <Ionicons name="tennisball-outline" size={48} color={colors.textSecondary} />
-                <Text style={styles.emptyText}>No hay canchas disponibles</Text>
-              </View>
-            )}
-          />
+                )}
+                contentContainerStyle={styles.canchasList}
+                ListEmptyComponent={() => (
+                  <View style={styles.emptyContainer}>
+                    <Ionicons name="tennisball-outline" size={48} color={colors.textSecondary} />
+                    <Text style={styles.emptyText}>
+                      {searchQuery ? `No se encontraron canchas que coincidan con "${searchQuery}"` : 'No hay canchas disponibles'}
+                    </Text>
+                  </View>
+                )}
+              />
+            );
+          })()}
         </>
       )}
 
@@ -677,6 +969,68 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
+  // Header mejorado
+  headerContainer: {
+    backgroundColor: colors.white,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E0E0E0',
+    paddingBottom: spacing.md,
+  },
+  headerTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
+  },
+  headerTitleSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  headerTitle: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#001F5B',
+  },
+  headerBadge: {
+    backgroundColor: '#C4D600',
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    marginLeft: spacing.sm,
+    minWidth: 24,
+    alignItems: 'center',
+  },
+  headerBadgeText: {
+    fontSize: fontSize.xs,
+    fontWeight: 'bold',
+    color: '#001F5B',
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  headerButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#F5F5F5',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: spacing.sm,
+  },
+  searchIcon: {
+    marginRight: spacing.sm,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: fontSize.md,
+    color: colors.text,
+    paddingVertical: spacing.sm,
+  },
+  clearButton: {
+    padding: spacing.xs,
+  },
   title: {
     fontSize: fontSize.xl,
     fontWeight: 'bold',
@@ -735,6 +1089,54 @@ const styles = StyleSheet.create({
   todayDateText: {
     color: colors.primary,
   },
+  // Estilos para FilterTabs
+  filterTabsContainer: {
+    backgroundColor: colors.white,
+    paddingVertical: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  filterTabsContent: {
+    paddingHorizontal: spacing.md,
+  },
+  filterTab: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: 20,
+    backgroundColor: '#F5F5F5',
+    marginRight: spacing.sm,
+    minHeight: 36,
+  },
+  filterTabText: {
+    fontSize: fontSize.sm,
+    fontWeight: '600',
+    color: '#666666',
+  },
+  filterTabTextActive: {
+    color: colors.white,
+  },
+  filterTabBadge: {
+    marginLeft: spacing.xs,
+    backgroundColor: '#E0E0E0',
+    borderRadius: 10,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    minWidth: 20,
+    alignItems: 'center',
+  },
+  filterTabBadgeActive: {
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  filterTabBadgeText: {
+    fontSize: fontSize.xs,
+    fontWeight: 'bold',
+    color: '#666666',
+  },
+  filterTabBadgeTextActive: {
+    color: colors.white,
+  },
   courtFilterContainer: {
     backgroundColor: colors.white,
     paddingVertical: spacing.md,
@@ -773,18 +1175,144 @@ const styles = StyleSheet.create({
   },
   card: {
     backgroundColor: colors.white,
-    borderRadius: borderRadius.md,
+    borderRadius: 14,
     padding: spacing.lg,
     marginBottom: spacing.md,
+    marginHorizontal: spacing.md,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.12,
+    shadowRadius: 6,
+    elevation: 3,
   },
   canceledCard: {
-    opacity: 0.6,
+    opacity: 0.65,
   },
+  // Estilos del Card Header rediseñado
+  newCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: spacing.md,
+    paddingBottom: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+  },
+  timeSection: {
+    flex: 1,
+  },
+  newCardTime: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#001F5B',
+    marginBottom: 4,
+  },
+  newCardCancha: {
+    fontSize: fontSize.sm,
+    color: '#666666',
+    fontWeight: '500',
+  },
+  newStatusBadge: {
+    paddingVertical: 5,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+  },
+  newStatusText: {
+    color: colors.white,
+    fontSize: fontSize.xs,
+    fontWeight: '700',
+    textTransform: 'capitalize',
+  },
+  // Card Body
+  cardBody: {
+    marginBottom: spacing.md,
+  },
+  userSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.sm,
+  },
+  userAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#C4D600',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: spacing.sm,
+  },
+  userAvatarText: {
+    fontSize: fontSize.md,
+    fontWeight: 'bold',
+    color: '#001F5B',
+  },
+  userInfo: {
+    flex: 1,
+  },
+  userName: {
+    fontSize: fontSize.md,
+    fontWeight: '600',
+    color: colors.text,
+    marginBottom: 2,
+  },
+  userContact: {
+    fontSize: fontSize.xs,
+    color: '#999999',
+  },
+  canchaThumb: {
+    width: 60,
+    height: 60,
+    borderRadius: 8,
+    position: 'absolute',
+    right: 0,
+    top: 0,
+  },
+  // Card Footer
+  cardFooter: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    flexWrap: 'wrap',
+  },
+  actionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: 8,
+    flex: 1,
+    minWidth: '30%',
+  },
+  confirmBtn: {
+    backgroundColor: '#4CAF50',
+  },
+  cancelBtn: {
+    backgroundColor: '#EF5350',
+  },
+  detailsBtn: {
+    backgroundColor: '#F5F5F5',
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+  },
+  detailsBtnFull: {
+    backgroundColor: '#F5F5F5',
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: 8,
+    marginTop: spacing.xs,
+  },
+  actionBtnText: {
+    color: colors.white,
+    fontSize: fontSize.xs,
+    fontWeight: '600',
+    marginLeft: 4,
+  },
+  // Estilos legacy (mantener para compatibilidad)
   cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -966,6 +1494,13 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   // Estilos para la vista de disponibilidad de canchas
+  searchContainer: {
+    backgroundColor: colors.white,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
   disponibilidadHeader: {
     backgroundColor: colors.white,
     padding: spacing.lg,

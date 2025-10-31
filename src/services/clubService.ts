@@ -31,4 +31,19 @@ export const getClubInfo = async (): Promise<ClubInfo> => {
   return { ...clubInfoEjemplo };
 };
 
+/**
+ * Actualiza el logo del club
+ * @param imageUri URI de la imagen seleccionada
+ */
+export const updateClubLogo = async (imageUri: string): Promise<ClubInfo> => {
+  // Simular retraso de red
+  await new Promise(resolve => setTimeout(resolve, 800));
+  
+  // En un entorno real, aquí se enviaría la imagen al servidor
+  // Por ahora, solo actualizamos el objeto local
+  clubInfoEjemplo.logoUrl = imageUri;
+  
+  return { ...clubInfoEjemplo };
+};
+
 export type { ClubInfo };

@@ -44,6 +44,11 @@ const CanchaDetalleScreen = ({ route, navigation }: any) => {
   const [isSubmitting, setIsSubmitting] = useState(false); // Estado para el botón de confirmar
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
+  const [duracionSeleccionada, setDuracionSeleccionada] = useState<number>(1);
+  const [horarioSeleccionado, setHorarioSeleccionado] = useState<{
+    horaInicio: string;
+    horaFin: string;
+  } | null>(null);
 
   // Generar los próximos 20 días para el selector de fechas
   const dates = useMemo(() => {
@@ -139,9 +144,35 @@ const CanchaDetalleScreen = ({ route, navigation }: any) => {
       const bloqueados = canchaDetalle.horariosBloqueados || [];
       const ocupados = [...reservados, ...bloqueados];
       
-      const disponibles = todosLosHorarios.filter(
-        (hora: string) => !ocupados.includes(hora)
-      );
+      // Verificar disponibilidad considerando la duración
+      const disponibles = todosLosHorarios.filter((horaInicio: string) => {
+        // Convertir hora inicio a minutos para facilitar cálculos
+        const [horaI, minutosI] = horaInicio.split(':').map(Number);
+        const inicioMinutos = horaI * 60 + minutosI;
+        
+        // Calcular hora fin según duración
+        const duracionMinutos = duracionSeleccionada * 60;
+        const finMinutos = inicioMinutos + duracionMinutos;
+        const horaF = Math.floor(finMinutos / 60);
+        const minutosF = finMinutos % 60;
+        const horaFin = `${String(horaF).padStart(2, '0')}:${String(minutosF).padStart(2, '0')}`;
+        
+        // Verificar que ningún horario en el rango esté ocupado
+        for (let hora = horaI; hora <= horaF; hora++) {
+          const horaCheck = `${String(hora).padStart(2, '0')}:00`;
+          if (ocupados.includes(horaCheck)) {
+            return false;
+          }
+        }
+        
+        // Verificar que no exceda el horario de cierre
+        const [horaFinCancha] = canchaDetalle.horaFin.split(':').map(Number);
+        if (horaF > horaFinCancha) {
+          return false;
+        }
+        
+        return true;
+      });
       
       console.log('✅ Horarios disponibles calculados:', {
         total: todosLosHorarios.length,
@@ -159,7 +190,7 @@ const CanchaDetalleScreen = ({ route, navigation }: any) => {
   }, [canchaDetalle]);
 
   const handleConfirmarReserva = async () => {
-    if (!selectedDate || !selectedTime) {
+    if (!selectedDate || !horarioSeleccionado) {
       Alert.alert("Por favor, selecciona una fecha y un horario.");
       return;
     }
@@ -170,7 +201,9 @@ const CanchaDetalleScreen = ({ route, navigation }: any) => {
       complejoId: complejoId,
       canchaId: canchaId,
       fecha: selectedDate,
-      hora: selectedTime,
+      hora: horarioSeleccionado.horaInicio,
+      duracion: duracionSeleccionada,
+      horaFin: horarioSeleccionado.horaFin,
       usuarioId: 'user-id-placeholder', // TODO: Obtener del contexto de autenticación
     };
 
@@ -288,51 +321,159 @@ const CanchaDetalleScreen = ({ route, navigation }: any) => {
             ))}
           </ScrollView>
 
-          {/* Selector de Horarios */}
-          <Text style={styles.sectionTitle}>Horarios Disponibles</Text>
+          {/* Selector de Duración */}
+          <View style={styles.duracionSelector}>
+            <Text style={styles.duracionTitulo}>Seleccioná duración:</Text>
+            <View style={styles.duracionChips}>
+              {[1, 1.5, 2].map((duracion) => (
+                <TouchableOpacity
+                  key={duracion}
+                  style={[
+                    styles.duracionChip,
+                    duracionSeleccionada === duracion && styles.duracionChipActivo
+                  ]}
+                  onPress={() => {
+                    setDuracionSeleccionada(duracion);
+                    setHorarioSeleccionado(null);
+                  }}
+                >
+                  <Text style={[
+                    styles.duracionChipTexto,
+                    duracionSeleccionada === duracion && styles.duracionChipTextoActivo
+                  ]}>
+                    {duracion === 1 ? '1 hora' : `${duracion} hrs`}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+
+          {/* Lista de Horarios con Rangos */}
+          <Text style={styles.horariosDisponiblesTitulo}>
+            Horarios Disponibles ({duracionSeleccionada}h)
+          </Text>
+          
           {loading ? (
             <ActivityIndicator size="small" color={colors.primary} />
           ) : (
-            <View style={styles.timeContainer}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.horariosCarrusel}
+            >
               {horariosDisponibles.length > 0 ? (
-                horariosDisponibles.map((hora: string) => (
-                  <TouchableOpacity
-                    key={hora}
-                    style={[
-                      styles.timeButton,
-                      selectedTime === hora && styles.selectedTimeButton
-                    ]}
-                    onPress={() => setSelectedTime(hora)}
-                  >
-                    <Text style={[
-                      styles.timeText,
-                      selectedTime === hora && styles.selectedTimeText
-                    ]}>
-                      {hora}
-                    </Text>
-                  </TouchableOpacity>
-                ))
+                horariosDisponibles.map((horaInicio: string, index: number) => {
+                  // Calcular hora fin según duración seleccionada
+                  const [hora, minutos] = horaInicio.split(':').map(Number);
+                  const horaFinNum = hora + Math.floor(duracionSeleccionada);
+                  const minutosFinNum = minutos + (duracionSeleccionada % 1) * 60;
+                  const horaFin = `${String(horaFinNum).padStart(2, '0')}:${String(minutosFinNum).padStart(2, '0')}`;
+                  
+                  // Verificar disponibilidad del rango completo
+                  const rangoDisponible = true; // TODO: Implementar verificación real
+                  
+                  return (
+                    <TouchableOpacity
+                      key={horaInicio}
+                      style={[
+                        styles.horarioItemCarrusel,
+                        !rangoDisponible && styles.horarioItemOcupado,
+                        horarioSeleccionado?.horaInicio === horaInicio && styles.horarioItemSeleccionado
+                      ]}
+                      onPress={() => {
+                        if (rangoDisponible) {
+                          setHorarioSeleccionado({ horaInicio, horaFin });
+                          setSelectedTime(horaInicio);
+                        }
+                      }}
+                      disabled={!rangoDisponible}
+                    >
+                      <View style={[
+                        styles.indicadorDisponibilidad,
+                        { backgroundColor: rangoDisponible ? '#4CAF50' : '#EF5350' }
+                      ]} />
+                      
+                      <Text style={[
+                        styles.horarioRangoCarrusel,
+                        !rangoDisponible && styles.horarioRangoOcupado
+                      ]}>
+                        {horaInicio}
+                      </Text>
+                      
+                      <Text style={styles.horarioSeparador}>-</Text>
+                      
+                      <Text style={[
+                        styles.horarioRangoCarrusel,
+                        !rangoDisponible && styles.horarioRangoOcupado
+                      ]}>
+                        {horaFin}
+                      </Text>
+                      
+                      <Text style={[
+                        styles.estadoHorario,
+                        !rangoDisponible && styles.estadoHorarioOcupado
+                      ]}>
+                        {rangoDisponible ? 'Disponible' : 'Ocupado'}
+                      </Text>
+                      
+                      <View style={[
+                        styles.horarioBoton,
+                        !rangoDisponible && styles.horarioBotonOcupado
+                      ]}>
+                        <Text style={[
+                          styles.horarioBotonTexto,
+                          !rangoDisponible && styles.horarioBotonTextoOcupado
+                        ]}>
+                          {rangoDisponible ? 'Reservar' : 'Ocupado'}
+                        </Text>
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })
               ) : (
                 <Text style={styles.noTimeText}>No hay horarios disponibles para esta fecha.</Text>
               )}
-            </View>
+            </ScrollView>
           )}
 
-          {/* Botón de Reserva */}
-          <TouchableOpacity
-            style={[
-              styles.reserveButton,
-              (!selectedDate || !selectedTime || isSubmitting) && styles.disabledButton
-            ]}
-            disabled={!selectedDate || !selectedTime || isSubmitting}
-            onPress={handleConfirmarReserva}
-          >
-            {isSubmitting ? (
-              <ActivityIndicator color={colors.white} />
-            ) : (
-              <Text style={styles.reserveButtonText}>Confirmar Reserva</Text>
+          {/* Resumen y Botón de Reserva */}
+          <View style={styles.bottomContainer}>
+            {horarioSeleccionado && (
+              <View style={styles.resumenReserva}>
+                <View>
+                  <Text style={styles.resumenLabel}>Reserva seleccionada:</Text>
+                  <Text style={styles.resumenDetalle}>
+                    {selectedDate} • {horarioSeleccionado.horaInicio} - {horarioSeleccionado.horaFin}
+                  </Text>
+                </View>
+                <Text style={styles.resumenPrecio}>
+                  ${Number(canchaDetalle.precioHora) * duracionSeleccionada}
+                </Text>
+              </View>
             )}
-          </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={[
+                styles.reserveButton,
+                (!horarioSeleccionado || isSubmitting) && styles.disabledButton
+              ]}
+              disabled={!horarioSeleccionado || isSubmitting}
+              onPress={handleConfirmarReserva}
+            >
+              {isSubmitting ? (
+                <ActivityIndicator color="#001F5B" />
+              ) : (
+                <>
+                  <Text style={styles.reserveButtonText}>
+                    {horarioSeleccionado ? 'Confirmar Reserva' : 'Seleccioná un horario'}
+                  </Text>
+                  {horarioSeleccionado && (
+                    <Ionicons name="arrow-forward" size={20} color="#001F5B" />
+                  )}
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -344,17 +485,33 @@ const styles = StyleSheet.create({
   scrollView: { flex: 1 },
   galleryImage: { width: width, height: 250, backgroundColor: colors.background },
   content: { padding: spacing.lg },
-  title: { fontSize: fontSize.xl, fontWeight: 'bold', color: colors.text, marginBottom: spacing.xs },
+  title: { fontSize: fontSize.xl, fontWeight: 'bold', color: '#001F5B', marginBottom: spacing.xs },
   subtitle: { fontSize: fontSize.md, color: colors.textSecondary, marginBottom: spacing.sm },
-  price: { fontSize: fontSize.lg, fontWeight: 'bold', color: colors.primary, marginBottom: spacing.lg },
+  price: { fontSize: fontSize.lg, fontWeight: 'bold', color: '#C4D600', marginBottom: spacing.lg },
+  
+  // Características
   featuresContainer: { marginBottom: spacing.lg },
   featureItem: { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.xs },
-  featureText: { fontSize: fontSize.sm, color: colors.textSecondary, marginLeft: spacing.xs },
-  sectionTitle: { fontSize: fontSize.lg, fontWeight: 'bold', color: colors.text, marginTop: spacing.lg, marginBottom: spacing.md },
-  description: { fontSize: fontSize.md, color: colors.textSecondary, lineHeight: 20 },
+  featureText: { fontSize: fontSize.sm, color: '#666666', marginLeft: spacing.xs },
+  
+  // Secciones
+  sectionTitle: { 
+    fontSize: fontSize.lg, 
+    fontWeight: 'bold', 
+    color: '#001F5B', 
+    marginTop: spacing.lg, 
+    marginBottom: spacing.md 
+  },
+  description: { 
+    fontSize: fontSize.md, 
+    color: '#666666', 
+    lineHeight: 20 
+  },
+  
+  // Selector de Fecha
   datesContainer: { paddingVertical: spacing.sm },
   dateButton: {
-    backgroundColor: colors.background,
+    backgroundColor: '#F8F9FA',
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.sm,
     borderRadius: borderRadius.md,
@@ -364,34 +521,213 @@ const styles = StyleSheet.create({
     minHeight: 85,
     justifyContent: 'center',
   },
-  selectedDateButton: { backgroundColor: colors.primary },
-  dateDayName: { fontSize: fontSize.sm, textTransform: 'uppercase', color: colors.textSecondary, fontWeight: '600', marginBottom: 4 },
-  dateDayNumber: { fontSize: fontSize.lg, fontWeight: 'bold', color: colors.text, marginVertical: 2 },
-  dateMonth: { fontSize: fontSize.sm, textTransform: 'uppercase', color: colors.textSecondary, fontWeight: '600', marginTop: 4 },
-  selectedDateText: { color: colors.white },
-  timeContainer: { flexDirection: 'row', flexWrap: 'wrap' },
-  timeButton: {
-    backgroundColor: colors.background,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.lg,
-    borderRadius: borderRadius.md,
-    marginRight: spacing.sm,
-    marginBottom: spacing.sm,
+  selectedDateButton: { backgroundColor: '#C4D600' },
+  dateDayName: { 
+    fontSize: fontSize.sm, 
+    textTransform: 'uppercase', 
+    color: '#666666', 
+    fontWeight: '600', 
+    marginBottom: 4 
   },
-  selectedTimeButton: { backgroundColor: colors.primary },
-  timeText: { fontWeight: '600', color: colors.text, fontSize: fontSize.sm },
-  selectedTimeText: { color: colors.white },
-  noTimeText: { color: colors.textSecondary, fontStyle: 'italic', fontSize: fontSize.sm },
+  dateDayNumber: { 
+    fontSize: fontSize.lg, 
+    fontWeight: 'bold', 
+    color: '#001F5B', 
+    marginVertical: 2 
+  },
+  dateMonth: { 
+    fontSize: fontSize.sm, 
+    textTransform: 'uppercase', 
+    color: '#666666', 
+    fontWeight: '600', 
+    marginTop: 4 
+  },
+  selectedDateText: { color: '#001F5B' },
+  
+  // Selector de Duración
+  duracionSelector: {
+    marginTop: 20,
+    marginBottom: 16,
+  },
+  duracionTitulo: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#001F5B',
+    marginBottom: 12,
+  },
+  duracionChips: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  duracionChip: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    backgroundColor: 'transparent',
+    borderWidth: 1.5,
+    borderColor: '#E0E0E0',
+    alignItems: 'center',
+  },
+  duracionChipActivo: {
+    backgroundColor: '#C4D600',
+    borderColor: '#C4D600',
+  },
+  duracionChipTexto: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#666666',
+  },
+  duracionChipTextoActivo: {
+    color: '#001F5B',
+  },
+  
+  // Lista de Horarios
+  horariosDisponiblesTitulo: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#001F5B',
+    marginBottom: 16,
+    marginTop: 24,
+  },
+  horariosCarrusel: {
+    paddingHorizontal: spacing.sm,
+    paddingBottom: spacing.md,
+  },
+  horarioItemCarrusel: {
+    backgroundColor: '#FFFFFF',
+    padding: 16,
+    borderRadius: 12,
+    marginRight: 12,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    width: 160,
+    alignItems: 'center',
+  },
+  horarioItemOcupado: {
+    backgroundColor: '#F5F5F5',
+    opacity: 0.6,
+  },
+  horarioItemSeleccionado: {
+    borderColor: '#C4D600',
+    borderWidth: 2,
+  },
+  indicadorDisponibilidad: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    marginBottom: 8,
+  },
+  horarioRangoCarrusel: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#001F5B',
+    textAlign: 'center',
+  },
+  horarioRangoOcupado: {
+    color: '#999999',
+  },
+  horarioSeparador: {
+    fontSize: 16,
+    color: '#666666',
+    marginVertical: 4,
+  },
+  estadoHorario: {
+    fontSize: 12,
+    color: '#4CAF50',
+    marginTop: 8,
+    marginBottom: 12,
+  },
+  estadoHorarioOcupado: {
+    color: '#EF5350',
+  },
+  horarioBoton: {
+    backgroundColor: '#C4D600',
+    paddingVertical: 8,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    width: '100%',
+    alignItems: 'center',
+  },
+  horarioBotonOcupado: {
+    backgroundColor: 'transparent',
+  },
+  horarioBotonTexto: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#001F5B',
+  },
+  horarioBotonTextoOcupado: {
+    color: '#999999',
+  },
+  
+  // Textos de Estado
+  noTimeText: { 
+    color: '#666666', 
+    fontStyle: 'italic', 
+    fontSize: fontSize.sm 
+  },
+  
+  // Botón de Reserva
   reserveButton: {
-    backgroundColor: colors.primary,
+    backgroundColor: '#C4D600',
     padding: spacing.lg,
-    borderRadius: borderRadius.md,
+    borderRadius: 12,
     alignItems: 'center',
     marginTop: spacing.xl,
     minHeight: 50,
+    flexDirection: 'row',
+    justifyContent: 'center',
   },
-  disabledButton: { backgroundColor: colors.textSecondary },
-  reserveButtonText: { color: colors.white, fontSize: fontSize.md, fontWeight: 'bold' },
+  disabledButton: { 
+    backgroundColor: '#9E9E9E' 
+  },
+  reserveButtonText: { 
+    color: '#001F5B', 
+    fontSize: 16, 
+    fontWeight: 'bold',
+    marginRight: 8,
+  },
+  
+  // Contenedor inferior
+  bottomContainer: {
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#F0F0F0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  
+  // Resumen de reserva
+  resumenReserva: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#F8F9FA',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 12,
+  },
+  resumenLabel: {
+    fontSize: 12,
+    color: '#666666',
+    marginBottom: 4,
+  },
+  resumenDetalle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#001F5B',
+  },
+  resumenPrecio: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#C4D600',
+  },
 });
 
 export default CanchaDetalleScreen;

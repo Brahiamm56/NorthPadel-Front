@@ -8,7 +8,13 @@ import {
   ScrollView,
   Alert,
   TouchableOpacity,
+  Image,
+  Animated,
+  ActivityIndicator,
+  Dimensions,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Button, Input, Loading } from '../../components/common';
 import { colors } from '../../theme/colors';
 import { spacing, fontSize, fontWeight } from '../../theme/spacing';
@@ -91,162 +97,301 @@ export const LoginScreen = ({ navigation }: any) => {
   }
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    <LinearGradient
+      colors={['#001F5B', '#00152E', '#001F5B']}
+      style={styles.gradient}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
     >
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.logo}>🎾</Text>
-          <Text style={styles.title}>NorthPadel</Text>
-          <Text style={styles.subtitle}>Reservá tu cancha favorita</Text>
-        </View>
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Decorative circles for visual interest */}
+          <View style={styles.decorativeCircle1} />
+          <View style={styles.decorativeCircle2} />
 
-        {/* Formulario */}
-        <View style={styles.form}>
-          <Input
-            label="Email"
-            placeholder="tu@email.com"
-            value={email}
-            onChangeText={(text) => {
-              setEmail(text);
-              setErrors({ ...errors, email: '' });
-            }}
-            error={errors.email}
-            keyboardType="email-address"
-            autoCapitalize="none"
-          />
-
-          <Input
-            label="Contraseña"
-            placeholder="••••••••"
-            value={password}
-            onChangeText={(text) => {
-              setPassword(text);
-              setErrors({ ...errors, password: '' });
-            }}
-            error={errors.password}
-            isPassword
-          />
-
-          <TouchableOpacity style={styles.forgotPassword}>
-            <Text style={styles.forgotPasswordText}>
-              ¿Olvidaste tu contraseña?
-            </Text>
-          </TouchableOpacity>
-
-          <Button
-            title="Iniciar Sesión"
-            onPress={handleLogin}
-            loading={loading}
-            style={styles.loginButton}
-          />
-
-          <View style={styles.divider}>
-            <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>o</Text>
-            <View style={styles.dividerLine} />
+          {/* Header with Logo */}
+          <View style={styles.header}>
+            <Image 
+              source={require('../../../assets/images/logo.png')} 
+              style={styles.logo}
+              resizeMode="contain"
+            />
+            <Text style={styles.welcomeText}>¡Bienvenido a North Padel!</Text>
+            <Text style={styles.subtitleText}>Inicia sesión para continuar</Text>
           </View>
 
-          <Button
-            title="Continuar con Google"
-            onPress={() => Alert.alert('Próximamente', 'Login con Google')}
-            variant="outline"
-            style={styles.googleButton}
-          />
-        </View>
+          {/* Formulario */}
+          <View style={styles.form}>
+            <View style={styles.inputWrapper}>
+              <Input
+                label="Email"
+                placeholder="tu@email.com"
+                value={email}
+                onChangeText={(text) => {
+                  setEmail(text);
+                  setErrors({ ...errors, email: '' });
+                }}
+                error={errors.email}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                labelColor="#FFFFFF"
+                style={styles.input}
+              />
+            </View>
 
-        {/* Footer */}
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>¿No tenés cuenta?</Text>
-          <TouchableOpacity onPress={goToRegister}>
-            <Text style={styles.registerLink}>Registrate</Text>
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+            <View style={styles.inputWrapper}>
+              <Input
+                label="Contraseña"
+                placeholder="••••••••"
+                value={password}
+                onChangeText={(text) => {
+                  setPassword(text);
+                  setErrors({ ...errors, password: '' });
+                }}
+                error={errors.password}
+                isPassword
+                labelColor="#FFFFFF"
+                style={styles.input}
+              />
+            </View>
+
+            <TouchableOpacity style={styles.forgotPassword}>
+              <Text style={styles.forgotPasswordText}>
+                ¿Olvidaste tu contraseña?
+              </Text>
+            </TouchableOpacity>
+
+            {/* Custom Login Button with brand green */}
+            <TouchableOpacity 
+              style={styles.loginButton}
+              onPress={handleLogin}
+              disabled={loading}
+              activeOpacity={0.8}
+            >
+              <LinearGradient
+                colors={['#C4D600', '#A8B800']}
+                style={styles.loginButtonGradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+              >
+                {loading ? (
+                  <ActivityIndicator color="#001F5B" />
+                ) : (
+                  <Text style={styles.loginButtonText}>Iniciar Sesión</Text>
+                )}
+              </LinearGradient>
+            </TouchableOpacity>
+
+            <View style={styles.divider}>
+              <View style={styles.dividerLine} />
+              <Text style={styles.dividerText}>o continuar con</Text>
+              <View style={styles.dividerLine} />
+            </View>
+
+            {/* Google Button with outline style */}
+            <TouchableOpacity 
+              style={styles.googleButton}
+              onPress={() => Alert.alert('Próximamente', 'Login con Google')}
+              activeOpacity={0.8}
+            >
+              <View style={styles.googleButtonContent}>
+                <Text style={styles.googleIcon}>G</Text>
+                <Text style={styles.googleButtonText}>Continuar con Google</Text>
+              </View>
+            </TouchableOpacity>
+          </View>
+
+          {/* Footer */}
+          <View style={styles.footer}>
+            <Text style={styles.footerText}>¿No tenés cuenta?</Text>
+            <TouchableOpacity onPress={goToRegister} activeOpacity={0.7}>
+              <Text style={styles.registerLink}>Registrate aquí</Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </LinearGradient>
   );
 };
 
+// Detección del tamaño de pantalla
+const { height } = Dimensions.get('window');
+const isSmallDevice = height < 700;
+const isMediumDevice = height >= 700 && height < 800;
+
 const styles = StyleSheet.create({
+  gradient: {
+    flex: 1,
+  },
   container: {
     flex: 1,
-    backgroundColor: colors.background,
   },
   scrollContent: {
     flexGrow: 1,
-    justifyContent: 'center',
     paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.xl,
+    paddingTop: isSmallDevice ? spacing.md : (isMediumDevice ? spacing.lg : spacing.xl),
+    paddingBottom: isSmallDevice ? spacing.md : spacing.lg,
   },
+  // Decorative circles for visual interest
+  decorativeCircle1: {
+    position: 'absolute',
+    width: 300,
+    height: 300,
+    borderRadius: 150,
+    backgroundColor: 'rgba(196, 214, 0, 0.05)',
+    top: -100,
+    right: -100,
+  },
+  decorativeCircle2: {
+    position: 'absolute',
+    width: 200,
+    height: 200,
+    borderRadius: 100,
+    backgroundColor: 'rgba(196, 214, 0, 0.08)',
+    bottom: 100,
+    left: -50,
+  },
+  // Header styles
   header: {
     alignItems: 'center',
-    marginBottom: spacing.xxl,
+    marginBottom: isSmallDevice ? spacing.md : (isMediumDevice ? spacing.lg : spacing.xxl),
+    paddingTop: isSmallDevice ? spacing.sm : (isMediumDevice ? spacing.md : spacing.lg),
   },
   logo: {
-    fontSize: 64,
-    marginBottom: spacing.md,
+    width: isSmallDevice ? 160 : (isMediumDevice ? 190 : 220),
+    height: isSmallDevice ? 120 : (isMediumDevice ? 140 : 160),
+    marginBottom: isSmallDevice ? spacing.sm : spacing.md,
   },
-  title: {
-    fontSize: fontSize.xxxl,
+  welcomeText: {
+    fontSize: isSmallDevice ? fontSize.lg : fontSize.xl,
     fontWeight: fontWeight.bold,
-    color: colors.text,
+    color: colors.white,
     marginBottom: spacing.xs,
+    textAlign: 'center',
   },
-  subtitle: {
-    fontSize: fontSize.md,
-    color: colors.textSecondary,
+  subtitleText: {
+    fontSize: isSmallDevice ? fontSize.sm : fontSize.md,
+    color: 'rgba(255, 255, 255, 0.8)',
+    textAlign: 'center',
   },
+  // Form styles
   form: {
-    marginBottom: spacing.xl,
+    marginBottom: isSmallDevice ? spacing.sm : spacing.md,
+  },
+  inputWrapper: {
+    marginBottom: isSmallDevice ? spacing.sm : spacing.md,
+  },
+  input: {
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
   },
   forgotPassword: {
     alignSelf: 'flex-end',
-    marginBottom: spacing.lg,
+    marginBottom: isSmallDevice ? spacing.md : spacing.lg,
+    marginTop: spacing.xs,
   },
   forgotPasswordText: {
     fontSize: fontSize.sm,
-    color: colors.primary,
-    fontWeight: fontWeight.medium,
+    color: colors.brandGreen,
+    fontWeight: fontWeight.semibold,
+    textDecorationLine: 'underline',
   },
+  // Login button with gradient
   loginButton: {
-    marginBottom: spacing.lg,
+    marginBottom: isSmallDevice ? spacing.sm : spacing.md,
+    borderRadius: 12,
+    overflow: 'hidden',
+    shadowColor: '#C4D600',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
   },
+  loginButtonGradient: {
+    paddingVertical: isSmallDevice ? spacing.md : spacing.lg,
+    paddingHorizontal: spacing.xl,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 12,
+  },
+  loginButtonText: {
+    fontSize: fontSize.lg,
+    fontWeight: fontWeight.bold,
+    color: '#001F5B',
+    letterSpacing: 0.5,
+  },
+  // Divider
   divider: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: spacing.lg,
+    marginVertical: isSmallDevice ? spacing.sm : (isMediumDevice ? spacing.md : spacing.lg),
   },
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: colors.border,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
   },
   dividerText: {
     marginHorizontal: spacing.md,
-    color: colors.textSecondary,
+    color: 'rgba(255, 255, 255, 0.7)',
     fontSize: fontSize.sm,
+    fontWeight: fontWeight.medium,
   },
+  // Google button with outline
   googleButton: {
-    marginBottom: spacing.md,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    paddingVertical: isSmallDevice ? spacing.sm : spacing.md,
+    paddingHorizontal: spacing.lg,
+    marginBottom: isSmallDevice ? spacing.xs : spacing.sm,
   },
+  googleButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  googleIcon: {
+    fontSize: fontSize.xl,
+    fontWeight: fontWeight.bold,
+    color: colors.white,
+    marginRight: spacing.sm,
+  },
+  googleButtonText: {
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.semibold,
+    color: colors.white,
+  },
+  // Footer
   footer: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
+    marginTop: isSmallDevice ? spacing.xs : spacing.sm,
+    paddingBottom: isSmallDevice ? spacing.md : spacing.lg,
   },
   footerText: {
     fontSize: fontSize.md,
-    color: colors.textSecondary,
+    color: 'rgba(255, 255, 255, 0.8)',
     marginRight: spacing.xs,
   },
   registerLink: {
     fontSize: fontSize.md,
-    color: colors.primary,
-    fontWeight: fontWeight.semibold,
+    color: colors.brandGreen,
+    fontWeight: fontWeight.bold,
+    textDecorationLine: 'underline',
   },
 });

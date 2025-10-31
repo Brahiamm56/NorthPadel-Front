@@ -3,9 +3,9 @@ import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   TouchableOpacity,
   FlatList,
+  RefreshControl,
   Modal,
   TextInput,
   Switch,
@@ -15,6 +15,8 @@ import {
   Image,
   Platform,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -46,6 +48,7 @@ export const AdminCanchasScreen = () => {
   const [horaFin, setHoraFin] = useState('23:00');
   const [imagenUri, setImagenUri] = useState<string | null>(null);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   
   // Estados para el DateTimePicker
   const [showPickerFor, setShowPickerFor] = useState<'inicio' | 'fin' | null>(null);
@@ -69,6 +72,18 @@ export const AdminCanchasScreen = () => {
       Alert.alert('Error', 'No se pudieron cargar las canchas');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    try {
+      const data = await getMisCanchasAdmin();
+      setCanchas(data);
+    } catch (error) {
+      console.error('❌ [AdminCanchas] Error refrescando canchas:', error);
+    } finally {
+      setRefreshing(false);
     }
   };
 
@@ -288,234 +303,273 @@ export const AdminCanchasScreen = () => {
 
   // Renderizar cada ítem de la lista de canchas
   const renderItem = ({ item }: { item: CanchaAdmin }) => (
-    <View style={styles.card}>
-      <View style={styles.cardContent}>
+    <TouchableOpacity activeOpacity={0.7} style={styles.card} onPress={() => openEditModal(item)}>
+      <View style={styles.cardHeaderRow}>
         {item.imagenUrl ? (
           <Image source={{ uri: item.imagenUrl }} style={styles.cardImage} />
         ) : (
           <View style={styles.placeholderImage}>
-            <Ionicons name="image-outline" size={24} color={colors.textSecondary} />
+            <Ionicons name="tennisball-outline" size={28} color={colors.textSecondary} />
           </View>
         )}
-        <Text style={styles.cardTitle}>{item.nombre}</Text>
-        <Text style={styles.precio}>${item.precioHora} /hora</Text>
+        <View style={styles.cardInfo}>
+          <View style={styles.titleRow}>
+            <Text style={styles.courtName} numberOfLines={1} ellipsizeMode="tail">{item.nombre}</Text>
+            <View style={[styles.estadoBadge, item.activa ? styles.estadoActiva : styles.estadoPausada]}>
+              <Text style={styles.estadoBadgeText}>{item.activa ? 'Activa' : 'Pausada'}</Text>
+            </View>
+          </View>
+          {(item as any)?.techada !== undefined || (item as any)?.capacidad || (item as any)?.ubicacion ? (
+            <Text style={styles.featuresText} numberOfLines={1}>
+              {[(item as any)?.techada ? 'Techada' : undefined, (item as any)?.ubicacion, (item as any)?.capacidad ? `${(item as any).capacidad} jugadores` : undefined]
+                .filter(Boolean)
+                .join(' • ')}
+            </Text>
+          ) : null}
+          <View style={styles.priceRatingRow}>
+            <View style={styles.priceRow}>
+              <Ionicons name="cash-outline" size={16} color={colors.brandBlue} />
+              <Text style={styles.priceText}>${item.precioHora} /hora</Text>
+            </View>
+            {(item as any)?.rating ? (
+              <View style={styles.ratingRow}>
+                <Ionicons name="star" size={14} color="#FFC107" />
+                <Text style={styles.ratingText}>
+                  {(item as any).rating}
+                  {(item as any)?.cantidadReviews ? ` (${(item as any).cantidadReviews})` : ''}
+                </Text>
+              </View>
+            ) : null}
+          </View>
+        </View>
       </View>
-      <View style={styles.cardActions}>
-        <TouchableOpacity
-          style={styles.actionButton}
-          onPress={() => openEditModal(item)}
-        >
-          <Ionicons name="pencil" size={20} color={colors.primary} />
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.actionButton}
-          onPress={() => handleDeleteCancha(item)}
-        >
-          <Ionicons name="trash" size={20} color={colors.error} />
-        </TouchableOpacity>
+      <View style={styles.separator} />
+      <View style={styles.cardFooterRow}>
         <View style={styles.switchContainer}>
-          <Text style={styles.switchText}>
-            {item.activa ? 'Publicada' : 'Oculta'}
-          </Text>
           <Switch
             value={item.activa}
             onValueChange={() => handleToggleStatus(item.id)}
-            trackColor={{ false: '#767577', true: colors.primary }}
-            thumbColor={item.activa ? colors.white : '#f4f3f4'}
+            trackColor={{ false: '#E0E0E0', true: '#4CAF50' }}
+            thumbColor={'#FFFFFF'}
+            ios_backgroundColor={'#E0E0E0'}
           />
+          <Text style={styles.switchLabel}>{item.activa ? 'Publicada' : 'No publicada'}</Text>
+        </View>
+        <View style={styles.footerButtonsRow}>
+          <TouchableOpacity style={styles.btnOutline} onPress={() => openEditModal(item)} activeOpacity={0.7}>
+            <Ionicons name="create-outline" size={16} color={colors.brandBlue} />
+            <Text style={styles.btnOutlineText}>Editar</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.btnFilled} onPress={() => Alert.alert('Estadísticas', 'Navegar a estadísticas de la cancha')} activeOpacity={0.7}>
+            <Ionicons name="bar-chart-outline" size={16} color={colors.brandBlue} />
+            <Text style={styles.btnFilledText}>Stats</Text>
+          </TouchableOpacity>
         </View>
       </View>
-    </View>
+    </TouchableOpacity>
   );
 
-  return (
-    <SafeAreaView style={styles.container}>
-      {/* Encabezado */}
-      <View style={styles.header}>
+
+
+return (
+  <SafeAreaView style={styles.container} edges={['top']}>
+    {/* Encabezado */}
+    <View style={styles.header}>
+      <View style={styles.headerRow}>
         <Text style={styles.headerTitle}>Mis Canchas</Text>
+        <TouchableOpacity style={styles.headerConfigBtn} onPress={() => {}}>
+          <Ionicons name="settings-outline" size={22} color={colors.brandBlue} />
+        </TouchableOpacity>
       </View>
+      <Text style={styles.headerSubtitle}>Gestiona tus canchas de padel</Text>
+    </View>
 
-      {/* Lista de canchas o estado vacío */}
-      {canchas.length === 0 ? (
-        <View style={styles.emptyState}>
-          <Text style={styles.emoji}>🎾</Text>
-          <Text style={styles.emptyTitle}>Aún no tienes canchas publicadas</Text>
-          <Text style={styles.emptySubtitle}>
-            Haz clic en el botón + para añadir tu primera cancha
-          </Text>
-        </View>
-      ) : (
-        <FlatList
-          data={canchas}
-          renderItem={renderItem}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.listContent}
-        />
-      )}
+    {/* Lista de canchas o estado vacío */}
+    {canchas.length === 0 ? (
+      <View style={styles.emptyState}>
+        <Text style={styles.emoji}>🎾</Text>
+        <Text style={styles.emptyTitle}>Aún no tienes canchas publicadas</Text>
+        <Text style={styles.emptySubtitle}>
+          Haz clic en el botón + para añadir tu primera cancha
+        </Text>
+      </View>
+    ) : (
+      <FlatList
+        data={canchas}
+        renderItem={renderItem}
+        keyExtractor={(item) => item.id}
+        contentContainerStyle={styles.listContent}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.brandGreen]} tintColor={colors.brandGreen} />
+        }
+      />
+    )}
 
-      {/* Botón flotante */}
-      <TouchableOpacity
-        style={styles.fab}
-        onPress={openCreateModal}
-      >
-        <Ionicons name="add" size={24} color="white" />
-      </TouchableOpacity>
+    {/* Botón flotante */}
+    <TouchableOpacity
+      style={styles.fab}
+      onPress={openCreateModal}
+      activeOpacity={0.8}
+    >
+      <Ionicons name="add" size={30} color="#FFFFFF" />
+    </TouchableOpacity>
 
-      {/* Modal para crear/editar cancha */}
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={modalVisible}
-        onRequestClose={() => setModalVisible(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>
-                {editMode ? 'Editar Cancha' : 'Crear Nueva Cancha'}
-              </Text>
-              <TouchableOpacity onPress={() => setModalVisible(false)}>
-                <Ionicons name="close" size={24} color="black" />
-              </TouchableOpacity>
+    {/* Modal para crear/editar cancha */}
+    <Modal
+      animationType="slide"
+      transparent={true}
+      visible={modalVisible}
+      onRequestClose={() => setModalVisible(false)}
+    >
+      <View style={styles.modalOverlay}>
+        <View style={styles.modalContent}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>
+              {editMode ? 'Editar Cancha' : 'Crear Nueva Cancha'}
+            </Text>
+            <TouchableOpacity onPress={() => setModalVisible(false)}>
+              <Ionicons name="close" size={24} color="black" />
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView style={styles.form}>
+            <Text style={styles.label}>Nombre de la cancha</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Ej: Cancha 1"
+              value={nombre}
+              onChangeText={setNombre}
+            />
+
+            <Text style={styles.label}>Precio por hora</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Ej: 1500"
+              value={precioHora}
+              onChangeText={setPrecioHora}
+              keyboardType="numeric"
+            />
+
+            <Text style={styles.label}>Descripción</Text>
+            <TextInput
+              style={[styles.input, styles.textArea]}
+              placeholder="Describe la cancha..."
+              value={descripcion}
+              onChangeText={setDescripcion}
+              multiline
+              numberOfLines={3}
+            />
+
+            <View style={styles.switchRow}>
+              <Text style={styles.label}>Techada</Text>
+              <Switch
+                value={techada}
+                onValueChange={setTechada}
+                trackColor={{ false: '#767577', true: colors.primary }}
+                thumbColor={techada ? colors.white : '#f4f3f4'}
+              />
             </View>
 
-            <ScrollView style={styles.form}>
-              <Text style={styles.label}>Nombre de la cancha</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Ej: Cancha 1"
-                value={nombre}
-                onChangeText={setNombre}
+            <View style={styles.switchRow}>
+              <Text style={styles.label}>Pelotitas disponibles</Text>
+              <Switch
+                value={pelotitas}
+                onValueChange={setPelotitas}
+                trackColor={{ false: '#767577', true: colors.primary }}
+                thumbColor={pelotitas ? colors.white : '#f4f3f4'}
               />
+            </View>
 
-              <Text style={styles.label}>Precio por hora</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Ej: 1500"
-                value={precioHora}
-                onChangeText={setPrecioHora}
-                keyboardType="numeric"
-              />
+            {/* Selectores de Hora */}
+            <View style={styles.timePickerSection}>
+              <Text style={styles.sectionTitle}>Horario de Disponibilidad</Text>
+              
+              <View style={styles.timePickerRow}>
+                <View style={styles.timePickerItem}>
+                  <Text style={styles.label}>Hora Apertura</Text>
+                  <TouchableOpacity
+                    style={styles.timeDisplayButton}
+                    onPress={() => openTimePicker('inicio')}
+                  >
+                    <Ionicons name="time-outline" size={20} color={colors.primary} />
+                    <Text style={styles.timeDisplayText}>{horaInicio}</Text>
+                  </TouchableOpacity>
+                </View>
 
-              <Text style={styles.label}>Descripción</Text>
-              <TextInput
-                style={[styles.input, styles.textArea]}
-                placeholder="Describe la cancha..."
-                value={descripcion}
-                onChangeText={setDescripcion}
-                multiline
-                numberOfLines={3}
-              />
-
-              <View style={styles.switchRow}>
-                <Text style={styles.label}>Techada</Text>
-                <Switch
-                  value={techada}
-                  onValueChange={setTechada}
-                  trackColor={{ false: '#767577', true: colors.primary }}
-                  thumbColor={techada ? colors.white : '#f4f3f4'}
-                />
-              </View>
-
-              <View style={styles.switchRow}>
-                <Text style={styles.label}>Pelotitas disponibles</Text>
-                <Switch
-                  value={pelotitas}
-                  onValueChange={setPelotitas}
-                  trackColor={{ false: '#767577', true: colors.primary }}
-                  thumbColor={pelotitas ? colors.white : '#f4f3f4'}
-                />
-              </View>
-
-              {/* Selectores de Hora */}
-              <View style={styles.timePickerSection}>
-                <Text style={styles.sectionTitle}>Horario de Disponibilidad</Text>
-                
-                <View style={styles.timePickerRow}>
-                  <View style={styles.timePickerItem}>
-                    <Text style={styles.label}>Hora Apertura</Text>
-                    <TouchableOpacity
-                      style={styles.timeDisplayButton}
-                      onPress={() => openTimePicker('inicio')}
-                    >
-                      <Ionicons name="time-outline" size={20} color={colors.primary} />
-                      <Text style={styles.timeDisplayText}>{horaInicio}</Text>
-                    </TouchableOpacity>
-                  </View>
-
-                  <View style={styles.timePickerItem}>
-                    <Text style={styles.label}>Hora Cierre</Text>
-                    <TouchableOpacity
-                      style={styles.timeDisplayButton}
-                      onPress={() => openTimePicker('fin')}
-                    >
-                      <Ionicons name="time-outline" size={20} color={colors.primary} />
-                      <Text style={styles.timeDisplayText}>{horaFin}</Text>
-                    </TouchableOpacity>
-                  </View>
+                <View style={styles.timePickerItem}>
+                  <Text style={styles.label}>Hora Cierre</Text>
+                  <TouchableOpacity
+                    style={styles.timeDisplayButton}
+                    onPress={() => openTimePicker('fin')}
+                  >
+                    <Ionicons name="time-outline" size={20} color={colors.primary} />
+                    <Text style={styles.timeDisplayText}>{horaFin}</Text>
+                  </TouchableOpacity>
                 </View>
               </View>
+            </View>
 
-              <TouchableOpacity style={styles.photoButton} onPress={pickImage}>
-                <Ionicons name="camera" size={24} color={colors.primary} />
-                <Text style={styles.photoButtonText}>
-                  {imagenUri ? 'Cambiar foto' : 'Agregar foto'}
-                </Text>
-              </TouchableOpacity>
+            <TouchableOpacity style={styles.photoButton} onPress={pickImage}>
+              <Ionicons name="camera" size={24} color={colors.primary} />
+              <Text style={styles.photoButtonText}>
+                {imagenUri ? 'Cambiar foto' : 'Agregar foto'}
+              </Text>
+            </TouchableOpacity>
 
-              {imagenUri && (
-                <Image source={{ uri: imagenUri }} style={styles.previewImage} />
+            {imagenUri && (
+              <Image source={{ uri: imagenUri }} style={styles.previewImage} />
+            )}
+
+            <TouchableOpacity
+              style={[styles.publishButton, uploadingImage && styles.disabledButton]}
+              onPress={handleSubmit}
+              disabled={uploadingImage}
+            >
+              <Text style={styles.publishButtonText}>
+                {uploadingImage ? 'Subiendo...' : (editMode ? 'Actualizar Cancha' : 'Crear Cancha')}
+              </Text>
+            </TouchableOpacity>
+          </ScrollView>
+        </View>
+      </View>
+    </Modal>
+
+    {/* DateTimePicker - Selector de Hora Nativo */}
+    {showPickerFor !== null && (
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={showPickerFor !== null}
+        onRequestClose={() => setShowPickerFor(null)}
+      >
+        <View style={styles.pickerModalOverlay}>
+          <View style={styles.pickerModalContent}>
+            <View style={styles.pickerHeader}>
+              <Text style={styles.pickerTitle}>
+                {showPickerFor === 'inicio' ? 'Hora de Apertura' : 'Hora de Cierre'}
+              </Text>
+              {Platform.OS === 'ios' && (
+                <TouchableOpacity onPress={() => setShowPickerFor(null)}>
+                  <Text style={styles.pickerDoneButton}>Aceptar</Text>
+                </TouchableOpacity>
               )}
-
-              <TouchableOpacity
-                style={[styles.publishButton, uploadingImage && styles.disabledButton]}
-                onPress={handleSubmit}
-                disabled={uploadingImage}
-              >
-                <Text style={styles.publishButtonText}>
-                  {uploadingImage ? 'Subiendo...' : (editMode ? 'Actualizar Cancha' : 'Crear Cancha')}
-                </Text>
-              </TouchableOpacity>
-            </ScrollView>
+            </View>
+            <DateTimePicker
+              value={pickerTime}
+              mode="time"
+              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+              is24Hour={true}
+              onChange={onTimeChange}
+              textColor={colors.text}
+              accentColor={colors.primary}
+            />
           </View>
         </View>
       </Modal>
+    )}
+  </SafeAreaView>
+);
 
-      {/* DateTimePicker - Selector de Hora Nativo */}
-      {showPickerFor !== null && (
-        <Modal
-          animationType="fade"
-          transparent={true}
-          visible={showPickerFor !== null}
-          onRequestClose={() => setShowPickerFor(null)}
-        >
-          <View style={styles.pickerModalOverlay}>
-            <View style={styles.pickerModalContent}>
-              <View style={styles.pickerHeader}>
-                <Text style={styles.pickerTitle}>
-                  {showPickerFor === 'inicio' ? 'Hora de Apertura' : 'Hora de Cierre'}
-                </Text>
-                {Platform.OS === 'ios' && (
-                  <TouchableOpacity onPress={() => setShowPickerFor(null)}>
-                    <Text style={styles.pickerDoneButton}>Aceptar</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-              <DateTimePicker
-                value={pickerTime}
-                mode="time"
-                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                is24Hour={true}
-                onChange={onTimeChange}
-                textColor={colors.text}
-                accentColor={colors.primary}
-              />
-            </View>
-          </View>
-        </Modal>
-      )}
-    </SafeAreaView>
-  );
 };
 
 const { width } = Dimensions.get('window');
@@ -523,18 +577,35 @@ const { width } = Dimensions.get('window');
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: '#F5F5F5',
   },
   header: {
-    padding: spacing.lg,
     backgroundColor: colors.white,
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 16,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
   headerTitle: {
-    fontSize: fontSize.xl,
+    fontSize: 28,
     fontWeight: 'bold',
-    color: colors.text,
+    color: colors.brandBlue,
+    marginBottom: 4,
+  },
+  headerSubtitle: {
+    fontSize: 14,
+    color: '#666666',
+    marginTop: 4,
+  },
+  headerConfigBtn: {
+    padding: 6,
+    borderRadius: 18,
   },
   emptyState: {
     flex: 1,
@@ -559,81 +630,176 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   listContent: {
-    padding: spacing.lg,
+    paddingTop: 16,
+    paddingBottom: 100,
+    paddingHorizontal: 16,
   },
   card: {
-    backgroundColor: colors.white,
-    borderRadius: borderRadius.md,
-    padding: spacing.lg,
-    marginBottom: spacing.md,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
+    marginHorizontal: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
     elevation: 3,
   },
-  cardContent: {
+  cardHeaderRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: spacing.md,
+    alignItems: 'flex-start',
+    marginBottom: 16,
   },
   cardImage: {
-    width: 60,
-    height: 60,
-    borderRadius: borderRadius.sm,
-    marginRight: spacing.md,
+    width: 100,
+    height: 100,
+    borderRadius: 12,
+    marginRight: 12,
   },
   placeholderImage: {
-    width: 60,
-    height: 60,
-    borderRadius: borderRadius.sm,
+    width: 100,
+    height: 100,
+    borderRadius: 12,
     backgroundColor: colors.background,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: spacing.md,
+    marginRight: 12,
   },
-  cardTitle: {
-    fontSize: fontSize.md,
-    fontWeight: '600',
-    color: colors.text,
+  cardInfo: {
     flex: 1,
   },
-  precio: {
-    fontWeight: 'bold',
-    color: colors.primary,
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
-  cardActions: {
+  courtName: {
+    flex: 1,
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: colors.brandBlue,
+  },
+  estadoBadge: {
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    marginLeft: 8,
+  },
+  estadoActiva: {
+    backgroundColor: '#4CAF50',
+  },
+  estadoPausada: {
+    backgroundColor: '#9E9E9E',
+  },
+  estadoBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  featuresText: {
+    fontSize: 13,
+    color: '#666666',
+    marginTop: 4,
+  },
+  priceRatingRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    marginTop: 6,
   },
-  actionButton: {
-    padding: spacing.sm,
-    marginRight: spacing.sm,
+  priceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  priceText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: colors.brandBlue,
+    marginLeft: 6,
+  },
+  ratingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  ratingText: {
+    fontSize: 14,
+    color: '#666666',
+    marginLeft: 4,
+  },
+  separator: {
+    height: 1,
+    backgroundColor: '#F0F0F0',
+    marginVertical: 0,
+  },
+  cardFooterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 16,
   },
   switchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    flex: 1,
   },
-  switchText: {
-    marginRight: spacing.sm,
-    color: colors.textSecondary,
+  switchLabel: {
+    marginLeft: 8,
+    fontSize: 14,
+    color: '#666666',
+  },
+  footerButtonsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  btnOutline: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    backgroundColor: 'transparent',
+    borderWidth: 1.5,
+    borderColor: colors.brandBlue,
+    borderRadius: 8,
+    minWidth: 90,
+  },
+  btnOutlineText: {
+    color: colors.brandBlue,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  btnFilled: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    backgroundColor: colors.brandGreen,
+    borderRadius: 8,
+    minWidth: 90,
+  },
+  btnFilledText: {
+    color: colors.brandBlue,
+    fontSize: 14,
+    fontWeight: '600',
   },
   fab: {
     position: 'absolute',
-    right: spacing.xl,
-    bottom: spacing.xl,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: colors.primary,
+    right: 20,
+    bottom: 80,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: colors.brandGreen,
     justifyContent: 'center',
     alignItems: 'center',
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 3,
+    elevation: 8,
+    shadowColor: colors.brandGreen,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
   },
   modalOverlay: {
     flex: 1,

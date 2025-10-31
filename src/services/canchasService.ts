@@ -10,18 +10,26 @@ const API_URL = API_BASE_URL;
  * Deben coincidir con la estructura de tu base de datos en Firestore.
  */
 export type Cancha = {
-  id: string;
-  nombre: string;
-  imagenUrl: string;
-  precioHora: string;
-};
-
-export type Complejo = {
+  id: string;
+  nombre: string;
+  imagenUrl: string;
+  precioHora: string;
+  techada?: boolean;
+  iluminacion?: boolean;
+  blindex?: boolean;
+  cesped?: boolean;
+  horariosDisponibles?: number;
+  caracteristicas?: string[];
+};export type Complejo = {
  id: string;
  nombre: string;
  canchas: Cancha[];
  isVerified?: boolean;
  telefono?: string;
+ distancia?: number;
+ rating?: number;
+ reviewsCount?: number;
+ direccion?: string;
 };
 
 export type CanchaDetalle = {

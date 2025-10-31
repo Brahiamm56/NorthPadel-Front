@@ -4,6 +4,10 @@ export const colors = {
   primaryDark: '#059669',
   primaryLight: '#34d399',
   
+  // Colores de marca NorthPadel
+  brandBlue: '#001F5B', // Azul marino del logo
+  brandGreen: '#C4D600', // Verde lima del logo
+  
   // Colores secundarios
   secondary: '#3b82f6',
   secondaryDark: '#2563eb',

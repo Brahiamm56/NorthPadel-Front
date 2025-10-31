@@ -15,6 +15,7 @@ interface InputProps extends TextInputProps {
   error?: string;
   icon?: React.ReactNode;
   isPassword?: boolean;
+  labelColor?: string;
 }
 
 export const Input: React.FC<InputProps> = ({
@@ -22,6 +23,7 @@ export const Input: React.FC<InputProps> = ({
   error,
   icon,
   isPassword = false,
+  labelColor = colors.text,
   style,
   ...props
 }) => {
@@ -30,7 +32,7 @@ export const Input: React.FC<InputProps> = ({
 
   return (
     <View style={styles.container}>
-      {label && <Text style={styles.label}>{label}</Text>}
+      {label && <Text style={[styles.label, { color: labelColor }]}>{label}</Text>}
 
       <View
         style={[
@@ -77,21 +79,29 @@ const styles = StyleSheet.create({
   label: {
     fontSize: fontSize.sm,
     fontWeight: '600',
-    color: colors.text,
     marginBottom: spacing.xs,
+    letterSpacing: 0.3,
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.white,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: borderRadius.md,
+    borderWidth: 2,
+    borderColor: 'transparent',
+    borderRadius: 12,
     paddingHorizontal: spacing.md,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
   },
   inputContainerFocused: {
-    borderColor: colors.primary,
-    borderWidth: 2,
+    borderColor: '#C4D600',
+    shadowColor: '#C4D600',
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
   },
   inputContainerError: {
     borderColor: colors.error,
@@ -101,9 +111,10 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    paddingVertical: spacing.md,
+    paddingVertical: spacing.md + 2,
     fontSize: fontSize.md,
     color: colors.text,
+    fontWeight: '500',
   },
   inputWithIcon: {
     paddingLeft: 0,
