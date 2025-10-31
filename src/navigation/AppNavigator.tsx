@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { AuthNavigator } from './AuthNavigator';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../features/auth/contexts/AuthContext';
 import { Loading } from '../components/common';
 import { AdminTabs } from './AdminTabs';
 import { UserTabNavigator } from './UserTabNavigator';

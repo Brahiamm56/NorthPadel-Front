@@ -1,6 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { DeviceEventEmitter } from 'react-native';
-import { API_BASE_URL, TOKEN_KEY } from '../config/api';
+import { API_BASE_URL, TOKEN_KEY } from '../../../config/api';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
+import { auth } from '../../../config/firebase';
 
 // --- URL de nuestro backend ---
 const API_URL = `${API_BASE_URL}/auth`;
@@ -43,6 +45,16 @@ export const registerUser = async (userData: any) => {
     if (!response.ok) {
       throw new Error(data.message || 'Error al registrar el usuario.');
     }
+
+    // Crear usuario en Firebase después del registro exitoso en el backend
+    try {
+      await createUserWithEmailAndPassword(auth, userData.email, userData.password);
+      console.log('✅ Usuario creado en Firebase');
+    } catch (firebaseError) {
+      console.error('🔴 Error al crear usuario en Firebase:', firebaseError);
+      // Continuamos aunque falle Firebase ya que tenemos el usuario en el backend
+    }
+
     return { success: true, data };
   } catch (error: any) {
     console.error("🔴 Error en registerUser:", error);
@@ -86,6 +98,15 @@ export const loginUser = async (credentials: any) => {
 
         // --- ¡Paso Clave! Guardamos los datos de la sesión ---
         if (data.token && data.user) {
+            // Primero autenticamos en Firebase
+            try {
+                await signInWithEmailAndPassword(auth, credentials.email, credentials.password);
+                console.log('✅ Usuario autenticado en Firebase');
+            } catch (firebaseError) {
+                console.error('🔴 Error al autenticar en Firebase:', firebaseError);
+                // Continuamos aunque falle Firebase ya que tenemos el token JWT
+            }
+
             await AsyncStorage.setItem(TOKEN_KEY, data.token);
             await AsyncStorage.setItem(USER_KEY, JSON.stringify(data.user));
             console.log('✅ Token y datos de usuario guardados');

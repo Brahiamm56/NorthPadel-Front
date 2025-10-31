@@ -20,8 +20,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { colors } from '../../theme/colors';
-import { spacing, fontSize, borderRadius } from '../../theme/spacing';
+import { colors } from '../../../styles/colors';
+import { spacing, fontSize, borderRadius } from '../../../styles/spacing';
 import {
   getMisCanchasAdmin,
   crearCanchaAdmin,
@@ -29,8 +29,8 @@ import {
   deleteCanchaAdmin,
   toggleCanchaStatus,
   CanchaAdmin
-} from '../../services/adminService';
-import { CLOUDINARY_CONFIG, CLOUDINARY_UPLOAD_URL } from '../../config/cloudinary';
+} from '../services/admin.service';
+import { CLOUDINARY_CONFIG, CLOUDINARY_UPLOAD_URL } from '../../../config/cloudinary';
 
 export const AdminCanchasScreen = () => {
   // Estados

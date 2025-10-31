@@ -7,8 +7,8 @@ import {
   ViewStyle,
   TextStyle,
 } from 'react-native';
-import { colors } from '../../theme/colors';
-import { spacing, borderRadius, fontSize, fontWeight } from '../../theme/spacing';
+import { colors } from '../../styles/colors';
+import { spacing, borderRadius, fontSize, fontWeight } from '../../styles/spacing';
 
 interface ButtonProps {
   title: string;
@@ -92,70 +92,109 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: borderRadius.md,
-  },
+  } as const,
 
   // Variantes
   primaryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: borderRadius.md,
     backgroundColor: colors.primary,
   },
   secondaryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: borderRadius.md,
     backgroundColor: colors.secondary,
   },
   outlineButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: borderRadius.md,
     backgroundColor: 'transparent',
     borderWidth: 1.5,
     borderColor: colors.primary,
   },
   dangerButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: borderRadius.md,
     backgroundColor: colors.error,
   },
 
   // Tamaños
   smallButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: borderRadius.md,
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,
   },
   mediumButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: borderRadius.md,
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.lg,
   },
   largeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: borderRadius.md,
     paddingVertical: spacing.lg,
     paddingHorizontal: spacing.xl,
   },
 
   // Estado deshabilitado
   disabledButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: borderRadius.md,
     opacity: 0.5,
   },
 
   // Texto base
   text: {
     fontWeight: fontWeight.semibold,
-  },
+  } as const,
 
   // Texto por variante
   primaryText: {
     color: colors.white,
+    fontWeight: fontWeight.semibold,
   },
   secondaryText: {
     color: colors.white,
+    fontWeight: fontWeight.semibold,
   },
   outlineText: {
     color: colors.primary,
+    fontWeight: fontWeight.semibold,
   },
   dangerText: {
     color: colors.white,
+    fontWeight: fontWeight.semibold,
   },
 
   // Texto por tamaño
   smallText: {
     fontSize: fontSize.sm,
+    fontWeight: fontWeight.semibold,
   },
   mediumText: {
     fontSize: fontSize.md,
+    fontWeight: fontWeight.semibold,
   },
   largeText: {
     fontSize: fontSize.lg,
+    fontWeight: fontWeight.semibold,
   },
 });

@@ -1,10 +1,8 @@
-// Reemplaza 'TU_DIRECCION_IP' con la IP de tu computadora
+// Reemplaza 'TU_DIRECCION_IP' con la IP de tu computadora        
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { API_BASE_URL, TOKEN_KEY } from '../config/api';
+import { API_BASE_URL, TOKEN_KEY } from '../../../config/api';
 
-const API_URL = API_BASE_URL;
-
-export interface ReservaPayload {
+const API_URL = API_BASE_URL;export interface ReservaPayload {
   complejoId: string;
   canchaId: string;
   fecha: string; // ej: "2025-10-16"

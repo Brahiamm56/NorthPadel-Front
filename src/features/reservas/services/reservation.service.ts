@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { API_URL } from '../config/api';
-import { ReservaAdmin } from '../types/reservas.types';
+import { API_BASE_URL, TOKEN_KEY } from '../../../config/api';
 
 export const getReservasAdmin = async (token: string): Promise<ReservaAdmin[]> => {
   try {

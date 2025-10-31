@@ -84,11 +84,18 @@ const darkTheme = {
   },
 };
 
-// Crear el Context
-const ThemeContext = createContext();
+// Definir el tipo del contexto
+type ThemeContextType = {
+  theme: typeof lightTheme;
+  isDarkMode: boolean;
+  toggleTheme: () => Promise<void>;
+};
+
+// Crear el Context con el tipo
+const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 // Provider
-export const ThemeProvider = ({ children }) => {
+export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isDarkMode, setIsDarkMode] = useState(false);
 
   // Cargar tema guardado al iniciar

@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { API_BASE_URL, TOKEN_KEY } from '../config/api';
+import { API_BASE_URL, TOKEN_KEY } from '../../../config/api';
 
 const API_URL = API_BASE_URL;
 

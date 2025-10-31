@@ -12,9 +12,9 @@ import {
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { getMisReservas, cancelarReserva } from '../../services/reservasService';
-import { colors } from '../../theme/colors';
-import { spacing, fontSize, borderRadius } from '../../theme/spacing';
+import { getMisReservas, cancelarReserva } from '../../../features/reservas/services/reservations.service';
+import { colors } from '../../../styles/colors';
+import { spacing, fontSize, borderRadius } from '../../../styles/spacing';
 import { ReservaConCancha } from '../../types/reservas.types';
 
 const MisReservasScreen = ({ navigation }: any) => {

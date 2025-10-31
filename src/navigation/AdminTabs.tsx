@@ -2,10 +2,10 @@ import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors } from '../theme/colors';
-import { AdminCanchasScreen } from '../screens/admin/AdminCanchasScreen';
-import AdminReservasScreen from '../screens/admin/AdminReservasScreen';
-import AdminPerfilScreen from '../screens/admin/AdminPerfilScreen';
+import { colors } from '../styles/colors';
+import { AdminCanchasScreen } from '../features/admin/screens/AdminCanchasScreen';
+import AdminReservasScreen from '../features/admin/screens/AdminReservasScreen';
+import AdminPerfilScreen from '../features/admin/screens/AdminPerfilScreen';
 
 type TabParamList = {
   Reservas: undefined;

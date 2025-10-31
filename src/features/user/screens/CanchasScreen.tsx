@@ -13,10 +13,10 @@ import {
   Linking,
 } from 'react-native';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
-import { getComplejosConCanchas, type Complejo, type Cancha } from '../../services/canchasService';
-import { colors } from '../../theme/colors';
-import { spacing, fontSize, borderRadius } from '../../theme/spacing';
-import { useTheme } from '../../context/ThemeContext';
+import { getComplejosConCanchas, type Complejo, type Cancha } from '../../canchas/services/courts.service';
+import { colors } from '../../../styles/colors';
+import { spacing, fontSize, borderRadius } from '../../../styles/spacing';
+import { useTheme } from '../../../features/auth/contexts/ThemeContext';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { CanchasStackParamList } from '../../navigation/UserTabNavigator';
 

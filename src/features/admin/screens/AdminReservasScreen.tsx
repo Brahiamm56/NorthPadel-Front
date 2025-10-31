@@ -18,9 +18,9 @@ import {
 import { format, addDays, isToday, isSameDay } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Ionicons } from '@expo/vector-icons';
-import { SearchBar } from '../../components/admin/SearchBar';
-import { colors } from '../../theme/colors';
-import { spacing, fontSize, borderRadius } from '../../theme/spacing';
+import { SearchBar } from '../components/SearchBar';
+import { colors } from '../../../styles/colors';
+import { spacing, fontSize, borderRadius } from '../../../styles/spacing';
 import {
   getAdminReservas,
   confirmarReservaAdmin,
@@ -31,7 +31,7 @@ import {
   ReservaAdmin,
   CanchaAdmin,
   getMisCanchasAdmin
-} from '../../services/adminService';
+} from '../services/admin.service';
 
 // Componente para mostrar el selector de fechas
 const DateSelector = ({ selectedDate, onSelectDate }: { selectedDate: Date; onSelectDate: (date: Date) => void }) => {

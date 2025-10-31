@@ -1,5 +1,6 @@
-import { auth } from '../config/firebase';
+import { auth } from '../../../config/firebase';
 import { getFirestore, doc, getDoc } from 'firebase/firestore';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 /**
  * Servicio para manejar la información del usuario cliente
@@ -21,11 +22,21 @@ type UserInfo = {
  */
 export const getCurrentUserInfo = async (): Promise<UserInfo> => {
   try {
+    // Verificar token de autenticación
+    const token = await AsyncStorage.getItem('auth_token');
+    if (!token) {
+      console.log('🔴 No se encontró token de autenticación');
+      throw new Error('No hay usuario autenticado');
+    }
+
     const user = auth.currentUser;
     
     if (!user) {
+      console.log('🔴 No hay usuario activo en Firebase');
       throw new Error('No hay usuario autenticado');
     }
+
+    console.log('✅ Usuario autenticado encontrado:', user.email);
 
     // Obtener datos adicionales del usuario desde Firestore
     const db = getFirestore();

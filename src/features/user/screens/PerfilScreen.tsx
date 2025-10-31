@@ -10,9 +10,10 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { getCurrentUserInfo, type UserInfo } from '../../services/userService';
-import { logout as authLogout } from '../../services/authService';
-import { colors } from '../../theme/colors';
+import { getCurrentUserInfo, type UserInfo } from '../services/user.service';
+import { logout as authLogout } from '../../../features/auth/services/authentication.service';
+import { colors } from '../../../styles/colors';
+import { useAuth } from '../../../features/auth/contexts/AuthContext';
 
 /**
  * Componente reutilizable para las opciones del perfil
@@ -35,13 +36,20 @@ const ProfileOption = ({
  * Aquí el usuario podrá ver y editar su información personal
  */
 const PerfilScreen = () => {
+  const { user: authUser, isAuthenticated } = useAuth();
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Cargar datos del usuario al montar el componente
+  // Cargar datos del usuario al montar el componente o cuando cambie el estado de autenticación
   useEffect(() => {
     const loadUserData = async () => {
+      if (!isAuthenticated || !authUser) {
+        setLoading(false);
+        setError('No hay sesión activa');
+        return;
+      }
+
       console.log('🔵 Cargando datos del usuario...');
       try {
         const userData = await getCurrentUserInfo();

@@ -9,14 +9,14 @@ import {
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { DeviceEventEmitter } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { auth, db } from '../config/firebase';
-import { storage, STORAGE_KEYS } from '../utils/storage';
+import { auth, db } from '../../../config/firebase';
+import { storage, STORAGE_KEYS } from '../../../utils/storage';
 import {
   User,
   AuthContextType,
   LoginCredentials,
   RegisterCredentials,
-} from '../types/auth.types';
+} from '../../../types/auth.types';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -35,9 +35,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   // Escuchar cambios de autenticación de Firebase
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      if (firebaseUser) {
-        await handleUserAuthenticated(firebaseUser);
-      } else {
+      console.log('🔵 Estado de autenticación de Firebase cambió:', firebaseUser ? 'Autenticado' : 'No autenticado');
+      try {
+        if (firebaseUser) {
+          // Obtener el token
+          const token = await firebaseUser.getIdToken();
+          // Guardar el token en AsyncStorage
+          await AsyncStorage.setItem('auth_token', token);
+          await handleUserAuthenticated(firebaseUser);
+        } else {
+          // Limpiar token y usuario de AsyncStorage
+          await AsyncStorage.removeItem('auth_token');
+          await AsyncStorage.removeItem('user_data');
+          setUser(null);
+          setToken(null);
+          setLoading(false);
+        }
+      } catch (error) {
+        console.error('🔴 Error manejando cambio de autenticación:', error);
         setUser(null);
         setToken(null);
         setLoading(false);
@@ -58,6 +73,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         uid: data.user.id,
         email: data.user.email,
         nombre: data.user.nombre,
+        apellido: data.user.apellido || '',  // Si no viene del backend, usamos string vacío
         role: data.user.role,
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -86,6 +102,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     try {
       console.log('🔵 Cargando usuario desde AsyncStorage...');
       
+      // Verificar si hay un usuario activo en Firebase
+      const currentUser = auth.currentUser;
+      if (!currentUser) {
+        console.log('🔴 No hay usuario autenticado en Firebase');
+        setUser(null);
+        setToken(null);
+        setLoading(false);
+        return;
+      }
+
       // Usar las mismas claves que authService
       const savedToken = await AsyncStorage.getItem('auth_token');
       const savedUserJson = await AsyncStorage.getItem('user_data');
@@ -97,11 +123,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         const savedUser = JSON.parse(savedUserJson);
         console.log('🔵 Usuario cargado desde storage:', savedUser);
         
-        // Convertir al formato del AuthContext
+        // Convertir al formato del AuthContext y asegurarse de que el uid coincida con Firebase
         const user: User = {
-          uid: savedUser.id,
-          email: savedUser.email,
+          uid: currentUser.uid, // Usar el uid de Firebase
+          email: currentUser.email || savedUser.email,
           nombre: savedUser.nombre,
+          apellido: savedUser.apellido || '',  // Si no viene del storage, usamos string vacío
           role: savedUser.role,
           createdAt: new Date(),
           updatedAt: new Date(),

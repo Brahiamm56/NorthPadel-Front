@@ -3,13 +3,13 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors } from '../theme/colors';
+import { colors } from '../styles/colors';
 
 // Importar las pantallas del usuario
-import CanchasScreen from '../screens/user/CanchasScreen';
-import CanchaDetalleScreen from '../screens/user/CanchaDetalleScreen';
-import MisReservasScreen from '../screens/user/MisReservasScreen';
-import PerfilScreen from '../screens/user/PerfilScreen';
+import CanchasScreen from '../features/user/screens/CanchasScreen';
+import CanchaDetalleScreen from '../features/user/screens/CanchaDetalleScreen';
+import MisReservasScreen from '../features/user/screens/MisReservasScreen';
+import PerfilScreen from '../features/user/screens/PerfilScreen';
 
 /**
  * Definición de tipos para el Stack Navigator de Canchas

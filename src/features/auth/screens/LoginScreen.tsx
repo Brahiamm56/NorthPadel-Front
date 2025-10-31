@@ -15,11 +15,11 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Button, Input, Loading } from '../../components/common';
-import { colors } from '../../theme/colors';
-import { spacing, fontSize, fontWeight } from '../../theme/spacing';
-import { validators, errorMessages } from '../../utils/validators';
-import { loginUser } from '../../services/authService';
+import { Button, Input, Loading } from '../../../components/common';
+import { colors } from '../../../styles/colors';
+import { spacing, fontSize, fontWeight } from '../../../styles/spacing';
+import { validators, errorMessages } from '../../../utils/validators';
+import { loginUser } from '../services/authentication.service';
 
 export const LoginScreen = ({ navigation }: any) => {
   const [loading, setLoading] = useState(false);
@@ -118,8 +118,8 @@ export const LoginScreen = ({ navigation }: any) => {
 
           {/* Header with Logo */}
           <View style={styles.header}>
-            <Image 
-              source={require('../../../assets/images/logo.png')} 
+            <Image
+              source={require('../../../../assets/images/logo.png')}
               style={styles.logo}
               resizeMode="contain"
             />

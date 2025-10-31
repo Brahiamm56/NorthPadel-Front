@@ -27,10 +27,10 @@ import {
   SafeAreaView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { getCanchaDetalle } from '../../services/canchasService';
-import { crearReserva } from '../../services/reservasService';
-import { colors } from '../../theme/colors';
-import { spacing, fontSize, borderRadius } from '../../theme/spacing';
+import { getCanchaDetalle } from '../../canchas/services/courts.service';
+import { crearReserva } from '../../reservas/services/reservations.service';
+import { colors } from '../../../styles/colors';
+import { spacing, fontSize, borderRadius } from '../../../styles/spacing';
 import { format, addDays } from 'date-fns';
 import { es } from 'date-fns/locale';
 

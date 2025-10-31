@@ -9,11 +9,11 @@ import {
   Alert,
   TouchableOpacity,
 } from 'react-native';
-import { Button, Input, Loading } from '../../components/common';
-import { colors } from '../../theme/colors';
-import { spacing, fontSize, fontWeight } from '../../theme/spacing';
-import { validators, errorMessages } from '../../utils/validators';
-import { registerUser } from '../../services/authService';
+import { Button, Input, Loading } from '../../../components/common';
+import { colors } from '../../../styles/colors';
+import { spacing, fontSize, fontWeight } from '../../../styles/spacing';
+import { validators, errorMessages } from '../../../utils/validators';
+import { registerUser } from '../services/authentication.service';
 
 export const RegisterScreen = ({ navigation }: any) => {
   const [loading, setLoading] = useState(false);

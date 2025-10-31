@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, ActivityIndicator, Text, StyleSheet } from 'react-native';
-import { colors } from '../../theme/colors';
-import { spacing, fontSize } from '../../theme/spacing';
+import { colors } from '../../styles/colors';
+import { spacing, fontSize } from '../../styles/spacing';
 
 interface LoadingProps {
   text?: string;
