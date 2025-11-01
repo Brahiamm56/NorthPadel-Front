@@ -88,10 +88,30 @@ const CanchaDetalleScreen = ({ route, navigation }: any) => {
   const generarHorariosMaestros = (horaInicio: string, horaFin: string): string[] => {
     const horarios: string[] = [];
     const [inicioHora] = horaInicio.split(':').map(Number);
-    const [finHora] = horaFin.split(':').map(Number);
+    let [finHora] = horaFin.split(':').map(Number);
     
-    for (let hora = inicioHora; hora <= finHora; hora++) {
-      horarios.push(`${hora.toString().padStart(2, '0')}:00`);
+    // Si horaFin es 00:00 (medianoche), tratarlo como hora 24 para el loop
+    if (finHora === 0) {
+      finHora = 24;
+    }
+    
+    // Si finHora < inicioHora, significa que cruza medianoche (ej: 14:00 a 02:00)
+    if (finHora < inicioHora) {
+      // Generar desde inicioHora hasta 24 (medianoche)
+      for (let hora = inicioHora; hora <= 24; hora++) {
+        const horaFormateada = hora === 24 ? '00' : hora.toString().padStart(2, '0');
+        horarios.push(`${horaFormateada}:00`);
+      }
+      // Luego generar desde 01:00 hasta finHora
+      for (let hora = 1; hora <= finHora; hora++) {
+        horarios.push(`${hora.toString().padStart(2, '0')}:00`);
+      }
+    } else {
+      // Caso normal: no cruza medianoche
+      for (let hora = inicioHora; hora <= finHora; hora++) {
+        const horaFormateada = hora === 24 ? '00' : hora.toString().padStart(2, '0');
+        horarios.push(`${horaFormateada}:00`);
+      }
     }
     
     return horarios;
@@ -109,6 +129,8 @@ const CanchaDetalleScreen = ({ route, navigation }: any) => {
       tieneHorariosMaestros: !!canchaDetalle.horariosMaestros,
       tieneHoraInicio: !!canchaDetalle.horaInicio,
       tieneHoraFin: !!canchaDetalle.horaFin,
+      horaInicio: canchaDetalle.horaInicio,
+      horaFin: canchaDetalle.horaFin,
       horariosReservados: canchaDetalle.horariosReservados,
       horariosBloqueados: canchaDetalle.horariosBloqueados
     });
@@ -146,29 +168,42 @@ const CanchaDetalleScreen = ({ route, navigation }: any) => {
       
       // Verificar disponibilidad considerando la duración
       const disponibles = todosLosHorarios.filter((horaInicio: string) => {
-        // Convertir hora inicio a minutos para facilitar cálculos
-        const [horaI, minutosI] = horaInicio.split(':').map(Number);
-        const inicioMinutos = horaI * 60 + minutosI;
+        // Convertir hora inicio a número
+        const [horaI] = horaInicio.split(':').map(Number);
         
-        // Calcular hora fin según duración
-        const duracionMinutos = duracionSeleccionada * 60;
-        const finMinutos = inicioMinutos + duracionMinutos;
-        const horaF = Math.floor(finMinutos / 60);
-        const minutosF = finMinutos % 60;
-        const horaFin = `${String(horaF).padStart(2, '0')}:${String(minutosF).padStart(2, '0')}`;
+        // Calcular cuántas horas necesitamos verificar según la duración
+        const horasAVerificar = Math.ceil(duracionSeleccionada);
         
         // Verificar que ningún horario en el rango esté ocupado
-        for (let hora = horaI; hora <= horaF; hora++) {
-          const horaCheck = `${String(hora).padStart(2, '0')}:00`;
-          if (ocupados.includes(horaCheck)) {
+        for (let i = 0; i < horasAVerificar; i++) {
+          let horaCheck = horaI + i;
+          
+          // Manejar el caso de medianoche (24 -> 00)
+          if (horaCheck >= 24) {
+            horaCheck = horaCheck - 24;
+          }
+          
+          const horaCheckStr = `${String(horaCheck).padStart(2, '0')}:00`;
+          
+          if (ocupados.includes(horaCheckStr)) {
             return false;
           }
         }
         
-        // Verificar que no exceda el horario de cierre
-        const [horaFinCancha] = canchaDetalle.horaFin.split(':').map(Number);
-        if (horaF > horaFinCancha) {
-          return false;
+        // Verificar que el horario de inicio + duración esté dentro del rango disponible
+        // Necesitamos verificar que todas las horas necesarias existan en todosLosHorarios
+        for (let i = 0; i < horasAVerificar; i++) {
+          let horaCheck = horaI + i;
+          
+          if (horaCheck >= 24) {
+            horaCheck = horaCheck - 24;
+          }
+          
+          const horaCheckStr = `${String(horaCheck).padStart(2, '0')}:00`;
+          
+          if (!todosLosHorarios.includes(horaCheckStr)) {
+            return false;
+          }
         }
         
         return true;
@@ -187,7 +222,7 @@ const CanchaDetalleScreen = ({ route, navigation }: any) => {
     
     console.log('⚠️ No se encontró ningún formato válido de horarios');
     return [];
-  }, [canchaDetalle]);
+  }, [canchaDetalle, duracionSeleccionada]);
 
   const handleConfirmarReserva = async () => {
     if (!selectedDate || !horarioSeleccionado) {
@@ -365,12 +400,24 @@ const CanchaDetalleScreen = ({ route, navigation }: any) => {
                 horariosDisponibles.map((horaInicio: string, index: number) => {
                   // Calcular hora fin según duración seleccionada
                   const [hora, minutos] = horaInicio.split(':').map(Number);
-                  const horaFinNum = hora + Math.floor(duracionSeleccionada);
-                  const minutosFinNum = minutos + (duracionSeleccionada % 1) * 60;
+                  let horaFinNum = hora + Math.floor(duracionSeleccionada);
+                  let minutosFinNum = minutos + (duracionSeleccionada % 1) * 60;
+                  
+                  // Ajustar si los minutos exceden 60
+                  if (minutosFinNum >= 60) {
+                    horaFinNum += Math.floor(minutosFinNum / 60);
+                    minutosFinNum = minutosFinNum % 60;
+                  }
+                  
+                  // Manejar el caso de medianoche (24 -> 00, 25 -> 01, etc.)
+                  if (horaFinNum >= 24) {
+                    horaFinNum = horaFinNum - 24;
+                  }
+                  
                   const horaFin = `${String(horaFinNum).padStart(2, '0')}:${String(minutosFinNum).padStart(2, '0')}`;
                   
-                  // Verificar disponibilidad del rango completo
-                  const rangoDisponible = true; // TODO: Implementar verificación real
+                  // Verificar disponibilidad del rango completo (ya está verificado en el filtro)
+                  const rangoDisponible = true;
                   
                   return (
                     <TouchableOpacity
@@ -587,8 +634,9 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     color: '#001F5B',
-    marginBottom: 16,
+    marginBottom: 5,
     marginTop: 24,
+    
   },
   horariosCarrusel: {
     paddingHorizontal: spacing.sm,

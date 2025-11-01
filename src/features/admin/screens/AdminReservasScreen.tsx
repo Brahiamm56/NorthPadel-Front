@@ -371,6 +371,7 @@ const AdminReservasScreen = () => {
   const [reservas, setReservas] = useState<ReservaAdmin[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedReserva, setSelectedReserva] = useState<ReservaAdmin | null>(null);
+  const [estadoMenuVisible, setEstadoMenuVisible] = useState(false);
 
   // Estados para el Bottom Sheet de disponibilidad
   const [availabilityModalVisible, setAvailabilityModalVisible] = useState(false);
@@ -431,25 +432,39 @@ const AdminReservasScreen = () => {
   // Filtrar reservas por fecha, cancha, estado y búsqueda
   const reservasFiltradas = useMemo(() => {
     const selectedDateStr = format(selectedDate, 'yyyy-MM-dd');
-    
+    const selectedCanchaNombre = selectedCancha
+      ? canchas.find(c => c.id === selectedCancha)?.nombre
+      : null;
+
     return reservas.filter(reserva => {
-      // Filtro por fecha
-      const matchesDate = reserva.fecha === selectedDateStr;
-      
-      // Filtro por cancha
-      const matchesCancha = !selectedCancha || reserva.canchaNombre === selectedCancha;
-      
+      // Filtro por fecha (soporta ISO con hora)
+      const reservaDateStr = (reserva.fecha || '').slice(0, 10);
+      const matchesDate = reservaDateStr === selectedDateStr;
+
+      // Filtro por cancha (mapear id seleccionado a nombre para comparar, case-insensitive)
+      const matchesCancha = !selectedCanchaNombre ||
+        (reserva.canchaNombre?.toLowerCase() === selectedCanchaNombre.toLowerCase());
+
+      // Normalizar estado recibido y soportar variantes masculino/femenino
+      const estadoNorm = (reserva.estado || '').toLowerCase();
+      const estadoBase = estadoNorm.startsWith('confirmad')
+        ? 'confirmada'
+        : estadoNorm.startsWith('cancelad')
+        ? 'cancelada'
+        : estadoNorm;
+
       // Filtro por estado
-      const matchesEstado = !selectedEstado || reserva.estado === selectedEstado;
-      
+      const matchesEstado = !selectedEstado || estadoBase === selectedEstado;
+
       // Filtro por búsqueda (nombre de usuario o email)
-      const matchesSearch = !searchQuery || 
-        reserva.usuarioNombre?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        reserva.usuarioEmail?.toLowerCase().includes(searchQuery.toLowerCase());
-      
+      const q = searchQuery.toLowerCase();
+      const matchesSearch = !q ||
+        (reserva.usuarioNombre?.toLowerCase().includes(q)) ||
+        (reserva.usuarioEmail?.toLowerCase().includes(q));
+
       return matchesDate && matchesCancha && matchesEstado && matchesSearch;
     });
-  }, [reservas, selectedDate, selectedCancha, selectedEstado, searchQuery]);
+  }, [reservas, selectedDate, selectedCancha, selectedEstado, searchQuery, canchas]);
 
   const handleSelectDate = (date: Date) => {
     setSelectedDate(date);
@@ -633,6 +648,16 @@ const AdminReservasScreen = () => {
           <View style={styles.headerActions}>
             <TouchableOpacity
               style={styles.headerButton}
+              onPress={() => setEstadoMenuVisible(true)}
+            >
+              <Ionicons
+                name="menu-outline"
+                size={22}
+                color="#001F5B"
+              />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.headerButton}
               onPress={() => setViewMode(viewMode === 'reservas' ? 'disponibilidad' : 'reservas')}
             >
               <Ionicons
@@ -647,19 +672,21 @@ const AdminReservasScreen = () => {
         {/* Barra de búsqueda */}
         {viewMode === 'reservas' && (
           <View style={styles.searchContainer}>
-            <Ionicons name="search-outline" size={20} color="#666666" style={styles.searchIcon} />
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Buscar por usuario o email..."
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              placeholderTextColor="#999999"
-            />
-            {searchQuery.length > 0 && (
-              <TouchableOpacity onPress={() => setSearchQuery('')} style={styles.clearButton}>
-                <Ionicons name="close-circle" size={20} color="#999999" />
-              </TouchableOpacity>
-            )}
+            <View style={styles.searchInputWrapper}>
+              <Ionicons name="search-outline" size={20} color="#666666" style={styles.searchIcon} />
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Buscar por usuario o email..."
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                placeholderTextColor="#999999"
+              />
+              {searchQuery.length > 0 && (
+                <TouchableOpacity onPress={() => setSearchQuery('')} style={styles.clearButton}>
+                  <Ionicons name="close-circle" size={20} color="#999999" />
+                </TouchableOpacity>
+              )}
+            </View>
           </View>
         )}
       </View>
@@ -671,11 +698,7 @@ const AdminReservasScreen = () => {
             onSelectDate={handleSelectDate}
           />
 
-          <FilterTabs
-            reservas={reservas}
-            selectedEstado={selectedEstado}
-            onSelectEstado={setSelectedEstado}
-          />
+          
 
           <CourtFilter
             canchas={canchas}
@@ -729,13 +752,6 @@ const AdminReservasScreen = () => {
               value={searchQuery}
               onChangeText={setSearchQuery}
             />
-          </View>
-          
-          <View style={styles.disponibilidadHeader}>
-            <Text style={styles.disponibilidadTitle}>Disponibilidad de Canchas</Text>
-            <Text style={styles.disponibilidadSubtitle}>
-              {format(selectedDate, "EEEE d 'de' MMMM", { locale: es })}
-            </Text>
           </View>
           
           {/* Filtrar canchas por búsqueda */}
@@ -853,6 +869,41 @@ const AdminReservasScreen = () => {
               </ScrollView>
             )}
           </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
+
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={estadoMenuVisible}
+        onRequestClose={() => setEstadoMenuVisible(false)}
+      >
+        <TouchableOpacity
+          style={styles.menuOverlay}
+          activeOpacity={1}
+          onPress={() => setEstadoMenuVisible(false)}
+        >
+          <View style={styles.menuContainer}>
+            <Text style={styles.menuTitle}>Filtrar por estado</Text>
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => { setSelectedEstado(null); setEstadoMenuVisible(false); }}
+            >
+              <Text style={styles.menuItemText}>Todas</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => { setSelectedEstado('pendiente'); setEstadoMenuVisible(false); }}
+            >
+              <Text style={styles.menuItemText}>Pendientes</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => { setSelectedEstado('confirmada'); setEstadoMenuVisible(false); }}
+            >
+              <Text style={styles.menuItemText}>Confirmadas</Text>
+            </TouchableOpacity>
+          </View>
         </TouchableOpacity>
       </Modal>
 
@@ -1390,6 +1441,39 @@ const styles = StyleSheet.create({
   listFooter: {
     height: 24,
   },
+  menuOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    justifyContent: 'flex-start',
+    alignItems: 'flex-end',
+  },
+  menuContainer: {
+    marginTop: 60,
+    marginRight: spacing.lg,
+    backgroundColor: colors.white,
+    borderRadius: 12,
+    paddingVertical: 8,
+    width: 220,
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+  },
+  menuTitle: {
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+  },
+  menuItem: {
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+  },
+  menuItemText: {
+    fontSize: fontSize.md,
+    color: colors.text,
+  },
   disponibilidadContainer: {
     flex: 1,
     padding: spacing.lg,
@@ -1500,6 +1584,16 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
+  },
+  searchInputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F5F5F5',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    paddingHorizontal: spacing.md,
+    paddingVertical: 6,
   },
   disponibilidadHeader: {
     backgroundColor: colors.white,

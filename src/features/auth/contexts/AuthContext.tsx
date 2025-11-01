@@ -102,16 +102,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     try {
       console.log('🔵 Cargando usuario desde AsyncStorage...');
       
-      // Verificar si hay un usuario activo en Firebase
-      const currentUser = auth.currentUser;
-      if (!currentUser) {
-        console.log('🔴 No hay usuario autenticado en Firebase');
-        setUser(null);
-        setToken(null);
-        setLoading(false);
-        return;
-      }
-
       // Usar las mismas claves que authService
       const savedToken = await AsyncStorage.getItem('auth_token');
       const savedUserJson = await AsyncStorage.getItem('user_data');
@@ -123,15 +113,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         const savedUser = JSON.parse(savedUserJson);
         console.log('🔵 Usuario cargado desde storage:', savedUser);
         
-        // Convertir al formato del AuthContext y asegurarse de que el uid coincida con Firebase
+        // Convertir al formato del AuthContext
         const user: User = {
-          uid: currentUser.uid, // Usar el uid de Firebase
-          email: currentUser.email || savedUser.email,
+          uid: savedUser.id || savedUser.uid, // Usar el ID del backend
+          email: savedUser.email,
           nombre: savedUser.nombre,
           apellido: savedUser.apellido || '',  // Si no viene del storage, usamos string vacío
           role: savedUser.role,
-          createdAt: new Date(),
-          updatedAt: new Date(),
+          createdAt: new Date(savedUser.createdAt) || new Date(),
+          updatedAt: new Date(savedUser.updatedAt) || new Date(),
         };
         
         setUser(user);
@@ -139,6 +129,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         console.log('✅ Usuario cargado exitosamente en AuthContext');
       } else {
         console.log('🔵 No hay usuario guardado');
+        setUser(null);
+        setToken(null);
       }
     } catch (error) {
       console.error('🔴 Error loading user from storage:', error);

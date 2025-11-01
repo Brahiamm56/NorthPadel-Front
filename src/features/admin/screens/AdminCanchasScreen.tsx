@@ -14,6 +14,7 @@ import {
   Alert,
   Image,
   Platform,
+  Pressable,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -136,28 +137,35 @@ export const AdminCanchasScreen = () => {
 
   // Función para manejar el cambio de hora en el picker
   const onTimeChange = (event: any, selectedDate?: Date) => {
-    // En Android, el picker se cierra automáticamente
     if (Platform.OS === 'android') {
+      // En Android, siempre cerramos el picker después de la interacción
       setShowPickerFor(null);
-    }
-    
-    if (event.type === 'set' && selectedDate) {
-      const hours = selectedDate.getHours().toString().padStart(2, '0');
-      const minutes = selectedDate.getMinutes().toString().padStart(2, '0');
-      const formattedTime = `${hours}:${minutes}`;
       
-      if (showPickerFor === 'inicio') {
-        setHoraInicio(formattedTime);
-      } else if (showPickerFor === 'fin') {
-        setHoraFin(formattedTime);
+      // Solo actualizamos si el usuario confirmó (event.type === 'set')
+      if (event.type === 'set' && selectedDate) {
+        const hours = selectedDate.getHours().toString().padStart(2, '0');
+        const minutes = selectedDate.getMinutes().toString().padStart(2, '0');
+        const formattedTime = `${hours}:${minutes}`;
+        
+        if (showPickerFor === 'inicio') {
+          setHoraInicio(formattedTime);
+        } else if (showPickerFor === 'fin') {
+          setHoraFin(formattedTime);
+        }
       }
-      
-      // En iOS, cerrar manualmente después de seleccionar
-      if (Platform.OS === 'ios') {
-        setShowPickerFor(null);
+    } else if (Platform.OS === 'ios') {
+      // En iOS, actualizamos en tiempo real mientras el usuario hace scroll
+      if (selectedDate) {
+        const hours = selectedDate.getHours().toString().padStart(2, '0');
+        const minutes = selectedDate.getMinutes().toString().padStart(2, '0');
+        const formattedTime = `${hours}:${minutes}`;
+        
+        if (showPickerFor === 'inicio') {
+          setHoraInicio(formattedTime);
+        } else if (showPickerFor === 'fin') {
+          setHoraFin(formattedTime);
+        }
       }
-    } else if (event.type === 'dismissed') {
-      setShowPickerFor(null);
     }
   };
 
@@ -280,7 +288,7 @@ export const AdminCanchasScreen = () => {
   const handleDeleteCancha = async (cancha: CanchaAdmin) => {
     Alert.alert(
       'Eliminar Cancha',
-      `¿Estás seguro de que quieres eliminar "${cancha.nombre}"?`,
+      `¿Estás seguro de que quieres eliminar "${cancha.nombre}"? Esta acción no se puede deshacer.`,
       [
         { text: 'Cancelar', style: 'cancel' },
         {
@@ -289,11 +297,18 @@ export const AdminCanchasScreen = () => {
           onPress: async () => {
             try {
               await deleteCanchaAdmin(cancha.id);
+              
+              // Cerrar el modal y resetear el formulario
+              setModalVisible(false);
+              resetForm();
+              
               Alert.alert('Éxito', 'Cancha eliminada correctamente');
+              
+              // Recargar la lista de canchas
               loadCanchas();
             } catch (error) {
               console.error('Error eliminando cancha:', error);
-              Alert.alert('Error', 'No se pudo eliminar la cancha');
+              Alert.alert('Error', 'No se pudo eliminar la cancha. Por favor, intenta de nuevo.');
             }
           },
         },
@@ -314,7 +329,14 @@ export const AdminCanchasScreen = () => {
         )}
         <View style={styles.cardInfo}>
           <View style={styles.titleRow}>
-            <Text style={styles.courtName} numberOfLines={1} ellipsizeMode="tail">{item.nombre}</Text>
+            <Text
+              style={styles.courtName}
+              numberOfLines={2}
+              ellipsizeMode="tail"
+              onLongPress={() => Alert.alert('Nombre de la cancha', item.nombre)}
+            >
+              {item.nombre}
+            </Text>
             <View style={[styles.estadoBadge, item.activa ? styles.estadoActiva : styles.estadoPausada]}>
               <Text style={styles.estadoBadgeText}>{item.activa ? 'Activa' : 'Pausada'}</Text>
             </View>
@@ -328,8 +350,9 @@ export const AdminCanchasScreen = () => {
           ) : null}
           <View style={styles.priceRatingRow}>
             <View style={styles.priceRow}>
-              <Ionicons name="cash-outline" size={16} color={colors.brandBlue} />
-              <Text style={styles.priceText}>${item.precioHora} /hora</Text>
+              <Ionicons name="cash-outline" size={18} color={colors.brandBlue} />
+              <Text style={styles.priceValueText}>${item.precioHora}</Text>
+              <Text style={styles.pricePerText}>/hora</Text>
             </View>
             {(item as any)?.rating ? (
               <View style={styles.ratingRow}>
@@ -353,17 +376,30 @@ export const AdminCanchasScreen = () => {
             thumbColor={'#FFFFFF'}
             ios_backgroundColor={'#E0E0E0'}
           />
-          <Text style={styles.switchLabel}>{item.activa ? 'Publicada' : 'No publicada'}</Text>
+          <Text style={styles.switchLabel}>{item.activa ? 'Activa' : 'Pausada'}</Text>
         </View>
         <View style={styles.footerButtonsRow}>
-          <TouchableOpacity style={styles.btnOutline} onPress={() => openEditModal(item)} activeOpacity={0.7}>
+          <Pressable
+            onPress={() => openEditModal(item)}
+            style={({ pressed }) => [
+              styles.btnOutline,
+              pressed && styles.btnOutlinePressed,
+            ]}
+          >
             <Ionicons name="create-outline" size={16} color={colors.brandBlue} />
             <Text style={styles.btnOutlineText}>Editar</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.btnFilled} onPress={() => Alert.alert('Estadísticas', 'Navegar a estadísticas de la cancha')} activeOpacity={0.7}>
+          </Pressable>
+          <Pressable
+            onPress={() => Alert.alert('Estadísticas', 'Navegar a estadísticas de la cancha')}
+            android_ripple={{ color: 'rgba(0,0,0,0.08)' }}
+            style={({ pressed }) => [
+              styles.btnFilled,
+              pressed && styles.btnFilledPressed,
+            ]}
+          >
             <Ionicons name="bar-chart-outline" size={16} color={colors.brandBlue} />
             <Text style={styles.btnFilledText}>Stats</Text>
-          </TouchableOpacity>
+          </Pressable>
         </View>
       </View>
     </TouchableOpacity>
@@ -385,7 +421,31 @@ return (
     </View>
 
     {/* Lista de canchas o estado vacío */}
-    {canchas.length === 0 ? (
+    {loading ? (
+      <FlatList
+        data={[1,2,3,4,5]}
+        keyExtractor={(i) => `skeleton-${i}`}
+        renderItem={() => (
+          <View style={styles.card}>
+            <View style={styles.cardHeaderRow}>
+              <View style={styles.skeletonImage} />
+              <View style={{ flex: 1 }}>
+                <View style={styles.skeletonLineLg} />
+                <View style={styles.skeletonLine} />
+                <View style={[styles.skeletonLine, { width: '40%' }]} />
+              </View>
+            </View>
+            <View style={styles.separator} />
+            <View style={styles.skeletonFooterRow}>
+              <View style={styles.skeletonSwitch} />
+              <View style={styles.skeletonBtns} />
+            </View>
+          </View>
+        )}
+        contentContainerStyle={styles.listContent}
+        showsVerticalScrollIndicator={false}
+      />
+    ) : canchas.length === 0 ? (
       <View style={styles.emptyState}>
         <Text style={styles.emoji}>🎾</Text>
         <Text style={styles.emptyTitle}>Aún no tienes canchas publicadas</Text>
@@ -418,7 +478,7 @@ return (
     <Modal
       animationType="slide"
       transparent={true}
-      visible={modalVisible}
+      visible={modalVisible && showPickerFor === null}
       onRequestClose={() => setModalVisible(false)}
     >
       <View style={styles.modalOverlay}>
@@ -529,39 +589,62 @@ return (
                 {uploadingImage ? 'Subiendo...' : (editMode ? 'Actualizar Cancha' : 'Crear Cancha')}
               </Text>
             </TouchableOpacity>
+
+            {/* Botón de eliminar - solo en modo edición */}
+            {editMode && selectedCancha && (
+              <TouchableOpacity
+                style={styles.deleteButton}
+                onPress={() => handleDeleteCancha(selectedCancha)}
+              >
+                <Ionicons name="trash-outline" size={20} color="#FFFFFF" />
+                <Text style={styles.deleteButtonText}>Eliminar Cancha</Text>
+              </TouchableOpacity>
+            )}
           </ScrollView>
         </View>
       </View>
     </Modal>
 
-    {/* DateTimePicker - Selector de Hora Nativo */}
-    {showPickerFor !== null && (
+    {/* DateTimePicker - Selector de Hora Nativo (FUERA del modal principal) */}
+    {showPickerFor !== null && Platform.OS === 'android' && (
+      <DateTimePicker
+        value={pickerTime}
+        mode="time"
+        display="default"
+        is24Hour={true}
+        onChange={onTimeChange}
+      />
+    )}
+
+    {showPickerFor !== null && Platform.OS === 'ios' && (
       <Modal
-        animationType="fade"
+        animationType="slide"
         transparent={true}
-        visible={showPickerFor !== null}
+        visible={true}
         onRequestClose={() => setShowPickerFor(null)}
+        presentationStyle="overFullScreen"
       >
         <View style={styles.pickerModalOverlay}>
+          <Pressable 
+            style={StyleSheet.absoluteFill}
+            onPress={() => setShowPickerFor(null)}
+          />
           <View style={styles.pickerModalContent}>
             <View style={styles.pickerHeader}>
               <Text style={styles.pickerTitle}>
                 {showPickerFor === 'inicio' ? 'Hora de Apertura' : 'Hora de Cierre'}
               </Text>
-              {Platform.OS === 'ios' && (
-                <TouchableOpacity onPress={() => setShowPickerFor(null)}>
-                  <Text style={styles.pickerDoneButton}>Aceptar</Text>
-                </TouchableOpacity>
-              )}
+              <TouchableOpacity onPress={() => setShowPickerFor(null)}>
+                <Text style={styles.pickerDoneButton}>Aceptar</Text>
+              </TouchableOpacity>
             </View>
             <DateTimePicker
               value={pickerTime}
               mode="time"
-              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+              display="spinner"
               is24Hour={true}
               onChange={onTimeChange}
               textColor={colors.text}
-              accentColor={colors.primary}
             />
           </View>
         </View>
@@ -631,7 +714,7 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingTop: 16,
-    paddingBottom: 100,
+    paddingBottom: 160,
     paddingHorizontal: 16,
   },
   card: {
@@ -684,6 +767,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 4,
     marginLeft: 8,
+    minWidth: 68,
+    alignItems: 'center',
   },
   estadoActiva: {
     backgroundColor: '#4CAF50',
@@ -694,7 +779,7 @@ const styles = StyleSheet.create({
   estadoBadgeText: {
     color: '#FFFFFF',
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   featuresText: {
     fontSize: 13,
@@ -712,11 +797,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
   },
-  priceText: {
-    fontSize: 16,
-    fontWeight: 'bold',
+  priceValueText: {
+    fontSize: 20,
+    fontWeight: '800',
     color: colors.brandBlue,
     marginLeft: 6,
+  },
+  pricePerText: {
+    fontSize: 14,
+    color: '#666666',
+    marginLeft: 4,
   },
   ratingRow: {
     flexDirection: 'row',
@@ -744,8 +834,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   switchLabel: {
-    marginLeft: 8,
-    fontSize: 14,
+    marginLeft: -45,
+    fontSize: 12,
+    marginTop: -50,
     color: '#666666',
   },
   footerButtonsRow: {
@@ -765,6 +856,9 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     minWidth: 90,
   },
+  btnOutlinePressed: {
+    backgroundColor: 'rgba(0,0,0,0.04)',
+  },
   btnOutlineText: {
     color: colors.brandBlue,
     fontSize: 14,
@@ -780,6 +874,9 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     minWidth: 90,
   },
+  btnFilledPressed: {
+    opacity: 0.85,
+  },
   btnFilledText: {
     color: colors.brandBlue,
     fontSize: 14,
@@ -788,7 +885,7 @@ const styles = StyleSheet.create({
   fab: {
     position: 'absolute',
     right: 20,
-    bottom: 80,
+    bottom: 28,
     width: 60,
     height: 60,
     borderRadius: 30,
@@ -800,6 +897,46 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.4,
     shadowRadius: 12,
+  },
+  // Skeleton loading styles
+  skeletonImage: {
+    width: 100,
+    height: 100,
+    borderRadius: 12,
+    backgroundColor: '#E8E8E8',
+    marginRight: 12,
+  },
+  skeletonLineLg: {
+    height: 18,
+    backgroundColor: '#E8E8E8',
+    borderRadius: 8,
+    marginBottom: 8,
+    width: '70%',
+  },
+  skeletonLine: {
+    height: 14,
+    backgroundColor: '#E8E8E8',
+    borderRadius: 8,
+    marginBottom: 8,
+    width: '55%',
+  },
+  skeletonFooterRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 16,
+  },
+  skeletonSwitch: {
+    width: 120,
+    height: 24,
+    backgroundColor: '#E8E8E8',
+    borderRadius: 12,
+  },
+  skeletonBtns: {
+    width: 160,
+    height: 36,
+    backgroundColor: '#E8E8E8',
+    borderRadius: 8,
   },
   modalOverlay: {
     flex: 1,
@@ -887,6 +1024,21 @@ const styles = StyleSheet.create({
     fontSize: fontSize.md,
     fontWeight: '600',
   },
+  deleteButton: {
+    flexDirection: 'row',
+    backgroundColor: '#DC3545',
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: spacing.md,
+    gap: spacing.xs,
+  },
+  deleteButtonText: {
+    color: '#FFFFFF',
+    fontSize: fontSize.md,
+    fontWeight: '600',
+  },
   // Estilos para la sección de Time Picker
   timePickerSection: {
     marginBottom: spacing.lg,
@@ -932,20 +1084,19 @@ const styles = StyleSheet.create({
   // Estilos para el Modal del DateTimePicker
   pickerModalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    justifyContent: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'flex-end',
     alignItems: 'center',
-    padding: spacing.lg,
   },
   pickerModalContent: {
     backgroundColor: colors.white,
-    borderRadius: borderRadius.lg,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
     padding: spacing.lg,
-    width: '90%',
-    maxWidth: 400,
-    elevation: 5,
+    width: '100%',
+    elevation: 10,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
+    shadowOffset: { width: 0, height: -4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
   },

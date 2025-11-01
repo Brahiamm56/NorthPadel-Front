@@ -16,8 +16,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Button, Input, Loading } from '../../../components/common';
-import { colors } from '../../../styles/colors';
-import { spacing, fontSize, fontWeight } from '../../../styles/spacing';
+import { colors, layout, typography } from '../../../theme';
 import { validators, errorMessages } from '../../../utils/validators';
 import { loginUser } from '../services/authentication.service';
 
@@ -119,7 +118,7 @@ export const LoginScreen = ({ navigation }: any) => {
           {/* Header with Logo */}
           <View style={styles.header}>
             <Image
-              source={require('../../../../assets/images/logoLogin.png')}
+              source={require('../../../../assets/images/logo.png')}
               style={styles.logo}
               resizeMode="contain"
             />
@@ -235,9 +234,9 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    paddingHorizontal: spacing.lg,
-    paddingTop: isSmallDevice ? spacing.md : (isMediumDevice ? spacing.lg : spacing.xl),
-    paddingBottom: isSmallDevice ? spacing.md : spacing.lg,
+    paddingHorizontal: layout.spacing.lg,
+    paddingTop: isSmallDevice ? layout.spacing.md : (isMediumDevice ? layout.spacing.lg : layout.spacing.xl),
+    paddingBottom: isSmallDevice ? layout.spacing.md : layout.spacing.lg,
   },
   // Decorative circles for visual interest
   decorativeCircle1: {
@@ -261,8 +260,8 @@ const styles = StyleSheet.create({
   // Header styles
   header: {
     alignItems: 'center',
-    marginBottom: isSmallDevice ? spacing.md : (isMediumDevice ? spacing.lg : spacing.xxl),
-    paddingTop: isSmallDevice ? spacing.sm : (isMediumDevice ? spacing.md : spacing.lg),
+    marginBottom: isSmallDevice ? layout.spacing.md : (isMediumDevice ? layout.spacing.lg : layout.spacing.xxl),
+    paddingTop: isSmallDevice ? layout.spacing.sm : (isMediumDevice ? layout.spacing.md : layout.spacing.lg),
   },
   logo: {
     width: isSmallDevice ? 160 : (isMediumDevice ? 190 : 220),
@@ -270,10 +269,12 @@ const styles = StyleSheet.create({
     marginBottom: isSmallDevice ? spacing.sm : spacing.md,
   },
   welcomeText: {
-    fontSize: isSmallDevice ? fontSize.lg : fontSize.xl,
-    fontWeight: fontWeight.bold,
+    title: {
+    fontSize: isSmallDevice ? typography.sizes.lg : typography.sizes.xl,
+    fontWeight: typography.weights.bold,
     color: colors.white,
-    marginBottom: spacing.xs,
+    marginBottom: layout.spacing.xs,
+  },
     textAlign: 'center',
   },
   subtitleText: {

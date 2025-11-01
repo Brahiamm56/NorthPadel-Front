@@ -119,11 +119,12 @@ export const updateCanchaAdmin = async (canchaId: string, canchaData: Partial<Ca
 };
 
 /**
- * Elimina una cancha del admin
+ * Elimina una cancha del admin de forma permanente
  */
-export const deleteCanchaAdmin = async (canchaId: string): Promise<boolean> => {
+export const deleteCanchaAdmin = async (canchaId: string): Promise<void> => {
   try {
     const token = await AsyncStorage.getItem(TOKEN_KEY);
+    
     const response = await fetch(`${API_URL}/admin/canchas/${canchaId}`, {
       method: 'DELETE',
       headers: {
@@ -133,13 +134,12 @@ export const deleteCanchaAdmin = async (canchaId: string): Promise<boolean> => {
 
     if (!response.ok) {
       const errorData = await response.text();
+      console.error('Error eliminando cancha:', errorData);
       throw new Error(`Error del servidor: ${errorData}`);
     }
-
-    return true;
   } catch (error) {
     console.error('Error en deleteCanchaAdmin:', error);
-    return false;
+    throw error;
   }
 };
 
